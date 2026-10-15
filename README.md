@@ -1,6 +1,6 @@
 # SFX Forge
 
-**Live editor:** https://sfxforge.vercel.app
+**Live editor:** https://sfxforge.vercel.app · **Connect an agent:** https://sfxforge.vercel.app/connect
 
 A visual game-audio synth for sound effects and short music tracks, plus an MCP server so AI agents can design them too.
 

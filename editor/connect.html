@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Connect an Agent · SFX Forge</title>
+<meta name="description" content="Connect Claude Code, Claude Desktop or your own Claude API agent to SFX Forge's MCP server so it can design game sound effects and music.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Martian+Mono:wght@300;400;600&display=swap">
+<style>
+/* Layout: one reading column on the editor's grid field. Numbered steps only where order matters
+   (install → connect → check); the three connection routes are alternatives, so they are lettered. */
+:root {
+  --ground: #0F0F0E;
+  --grid: #1A1A18;
+  --panel: #151513;
+  --line: #2B2A26;
+  --ink: #DDDACA;
+  --dim: #8A877B;
+  --faint: #55534B;
+  --teal: #6FA3AD;
+  --olive: #9A9D3C;
+  --hot: #E0503A;
+  --sand: #B2A68A;
+  --f-ui: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --f-glyph: "DotGothic16", "Martian Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink); font-family: var(--f-ui); font-weight: 300; font-size: 13px; line-height: 1.75;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+a { color: var(--ink); text-decoration-color: var(--faint); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+.wrap { max-width: 860px; margin: 0 auto; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--ground); z-index: 2; border-bottom: 1px solid var(--line); }
+.brand { font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; text-decoration: none; }
+.brand b { font-family: var(--f-glyph); font-weight: 400; font-size: 15px; margin-right: 6px; vertical-align: -1px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); padding: 4px 9px; font: inherit; font-size: 11px; color: var(--ink); background: none; text-transform: uppercase; letter-spacing: 0.04em; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--dim); }
+.btn.solid { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+
+header.hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 28px; align-items: end; padding-block: 56px 36px; border-bottom: 1px solid var(--line); }
+.kanji { font-family: var(--f-glyph); font-size: clamp(72px, 16vw, 132px); line-height: 0.9; color: var(--ink); }
+h1 { margin: 0; font-size: clamp(26px, 4.4vw, 40px); font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; text-wrap: balance; }
+.lede { margin: 12px 0 0; color: var(--dim); max-width: 60ch; }
+.eyebrow { font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); margin: 0 0 6px; }
+
+section { padding-block: 36px 8px; }
+h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 14px; display: flex; gap: 12px; align-items: baseline; }
+h2 .n { font-family: var(--f-glyph); font-weight: 400; font-size: 18px; color: var(--dim); letter-spacing: 0; min-width: 1.4em; }
+h3 { font-size: 13px; font-weight: 600; margin: 0; }
+p { margin: 0 0 12px; max-width: 68ch; }
+.muted { color: var(--dim); }
+code { font-family: var(--f-ui); font-size: 12px; background: var(--panel); border: 1px solid var(--line); padding: 1px 5px; overflow-wrap: anywhere; }
+
+.cmd { position: relative; margin: 10px 0 16px; border: 1px solid var(--line); background: var(--panel); }
+.cmd .bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-bottom: 1px solid var(--line); font-size: 10.5px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.1em; }
+.cmd pre { margin: 0; padding: 12px; overflow-x: auto; font-size: 12px; line-height: 1.65; color: var(--ink); }
+.cmd pre .c { color: var(--faint); }
+.cmd .copy { padding: 2px 8px; font-size: 10.5px; }
+
+.routes { display: grid; gap: 16px; }
+.route { border: 1px solid var(--line); background: rgba(15, 15, 14, 0.85); padding: 18px 18px 6px; min-width: 0; }
+.route.pick { border-color: var(--ink); }
+.route-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; }
+.tag { font-family: var(--f-glyph); font-size: 22px; line-height: 1; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line); flex: none; }
+.route-head .who { flex: 1 1 260px; min-width: 0; }
+.route-head .who p { margin: 2px 0 0; color: var(--dim); font-size: 12px; }
+.chip { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--olive); color: var(--olive); padding: 1px 6px; white-space: nowrap; }
+ol.steps { margin: 0 0 12px; padding-left: 1.4em; max-width: 68ch; }
+ol.steps li { margin-bottom: 6px; }
+.note { border-left: 2px solid var(--sand); padding: 2px 0 2px 12px; color: var(--dim); font-size: 12px; margin: 4px 0 14px; max-width: 68ch; }
+
+.check { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.say { border: 1px solid var(--line); padding: 14px; background: var(--panel); min-width: 0; }
+.say .who { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+.say q { quotes: none; color: var(--ink); }
+
+.table { overflow-x: auto; border: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: 12px; min-width: 520px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 400; color: var(--faint); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; background: var(--panel); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { white-space: nowrap; color: var(--teal); }
+td.grp { color: var(--faint); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; background: rgba(21, 21, 19, 0.6); }
+
+ul.prompts { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+ul.prompts li { border: 1px solid var(--line); padding: 10px 12px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; background: rgba(15, 15, 14, 0.85); }
+ul.prompts li span { min-width: 0; }
+
+footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--faint); font-size: 11.5px; display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: space-between; }
+
+@media (max-width: 640px) {
+  header.hero { grid-template-columns: minmax(0, 1fr); padding-block: 36px 28px; }
+  .check { grid-template-columns: minmax(0, 1fr); }
+  .top .btn.hide-sm { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="top">
+    <a class="brand" href="/"><b>響</b>SFX FORGE</a>
+    <div style="display:flex;gap:6px">
+      <a class="btn hide-sm" href="https://github.com/x0trad/sfxforge">GitHub ↗</a>
+      <a class="btn solid" href="/">Open editor</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="kanji" aria-hidden="true">繋</div>
+    <div>
+      <p class="eyebrow">MCP server · 15 tools · Node 18+, no dependencies</p>
+      <h1>Connect an agent</h1>
+      <p class="lede">Give Claude, or your own agent, the same synth as this editor. It can roll sound effects, compose and remix music, look at a preview of each sound, and export a pack of WAVs straight into your game's folder.</p>
+    </div>
+  </header>
+
+  <section aria-labelledby="s1">
+    <h2 id="s1"><span class="n">1</span>Install on your computer</h2>
+    <p>The MCP server runs locally next to your game. Clone the repo anywhere and run the smoke test. It spawns the server and calls every tool, so a pass means you're ready.</p>
+    <div class="cmd"><div class="bar"><span>Terminal</span><button class="btn copy" type="button">Copy</button></div>
+<pre>git clone https://github.com/x0trad/sfxforge ~/sfxforge
+cd ~/sfxforge && npm test</pre></div>
+    <p class="muted">Every route below takes one setting, <code>SFX_DIR</code>: the folder where sounds are saved. Point it at your game's assets, for example <code>~/galacticsmashbros/assets/sfx</code>, and the WAVs land where the game loads them. Each sound sits next to its <code>.sfx.json</code> recipe, so it can always be edited and re-rendered.</p>
+  </section>
+
+  <section aria-labelledby="s2">
+    <h2 id="s2"><span class="n">2</span>Pick how your agent connects</h2>
+    <div class="routes">
+
+      <article class="route pick">
+        <div class="route-head">
+          <div class="tag" aria-hidden="true">A</div>
+          <div class="who"><h3>Claude Code</h3><p>Best while you build the game. The setup is saved in the game's repo.</p></div>
+          <span class="chip">Recommended</span>
+        </div>
+        <p>Run this inside your game's folder:</p>
+        <div class="cmd"><div class="bar"><span>Terminal · in your game folder</span><button class="btn copy" type="button">Copy</button></div>
+<pre>claude mcp add --transport stdio --scope project \
+  --env SFX_DIR=$PWD/assets/sfx \
+  sfx -- node ~/sfxforge/src/server.js</pre></div>
+        <p class="muted">This writes a <code>.mcp.json</code> into the game repo, so the setup is committed with it. Claude Code asks you to approve the server the first time it starts.</p>
+      </article>
+
+      <article class="route">
+        <div class="route-head">
+          <div class="tag" aria-hidden="true">B</div>
+          <div class="who"><h3>Claude Desktop</h3><p>For chatting with Claude in the desktop app while it makes the sounds.</p></div>
+        </div>
+        <ol class="steps">
+          <li>Open <strong>Settings → Developer → Edit Config</strong>.</li>
+          <li>Add the <code>sfx</code> entry below. Use full paths: <code>~</code> doesn't work in this file, so write out <code>/Users/you/…</code>.</li>
+          <li>Quit and reopen Claude Desktop.</li>
+        </ol>
+        <div class="cmd"><div class="bar"><span>claude_desktop_config.json</span><button class="btn copy" type="button">Copy</button></div>
+<pre>{
+  "mcpServers": {
+    "sfx": {
+      "command": "node",
+      "args": ["/Users/you/sfxforge/src/server.js"],
+      "env": { "SFX_DIR": "/Users/you/galacticsmashbros/assets/sfx" }
+    }
+  }
+}</pre></div>
+        <p class="note">If the file already has other servers, add <code>"sfx": {…}</code> inside the existing <code>mcpServers</code> block rather than pasting a second one.</p>
+      </article>
+
+      <article class="route">
+        <div class="route-head">
+          <div class="tag" aria-hidden="true">C</div>
+          <div class="who"><h3>Your own agent on the Claude API</h3><p>Orchestrators such as Hermes, or any script that calls the Messages API.</p></div>
+        </div>
+        <p>The Claude API's built-in MCP connection only reaches servers on a public <code>https://</code> address, so it can't reach this local server. The repo includes a small bridge instead. It starts the server from Python, offers its tools to Claude, and passes results back, including the preview images.</p>
+        <div class="cmd"><div class="bar"><span>Terminal</span><button class="btn copy" type="button">Copy</button></div>
+<pre>pip install anthropic mcp
+export ANTHROPIC_API_KEY=…
+SFX_DIR=~/galacticsmashbros/assets/sfx \
+  python ~/sfxforge/examples/agents/claude_api_bridge.py \
+  "Make a light and heavy punch and a 40 second boss track, then export a pack"</pre></div>
+        <p>To use it inside an orchestrator, import it and give your sound-design agent a task:</p>
+        <div class="cmd"><div class="bar"><span>Python</span><button class="btn copy" type="button">Copy</button></div>
+<pre><span class="c"># a "sound designer" child agent</span>
+import asyncio, os, sys
+sys.path.insert(0, os.path.expanduser("~/sfxforge/examples/agents"))
+os.environ["SFX_DIR"] = os.path.expanduser("~/galacticsmashbros/assets/sfx")
+os.environ["SFX_TOOLS"] = "generate_sound,variations,generate_music,remix_music,render_sound,export_pack"
+import claude_api_bridge as sfx
+
+asyncio.run(sfx.run("Give the dash move a whooshier sound and export the pack"))</pre></div>
+        <p class="note"><code>SFX_TOOLS</code> is an allowlist. Leave out <code>delete_sound</code> or <code>play_sound</code> for agents that shouldn't use them. Other models that support tool calling (MiniMax, DeepSeek and so on) work the same way: only the model call changes. Models that can't read images still get the numbers but won't see the waveform previews.</p>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="s3">
+    <h2 id="s3"><span class="n">3</span>Check it's connected</h2>
+    <div class="check">
+      <div class="say"><div class="who">You</div><q>List the sfx categories and music styles.</q></div>
+      <div class="say"><div class="who">Agent, when it works</div><span class="muted">Answers with 23 categories (coin, punch, explosion… plus random) and 9 music styles (chiptune, fight, city pop, synthwave, lo-fi, house, drum &amp; bass, trap, boss).</span></div>
+    </div>
+    <p class="muted" style="margin-top:12px">If the tools don't appear, check that <code>node --version</code> prints 18 or higher and that the path to <code>server.js</code> is absolute and correct.</p>
+  </section>
+
+  <section aria-labelledby="s4">
+    <h2 id="s4">What your agent can do</h2>
+    <p>Every render returns duration, peak and RMS loudness, attack and brightness, plus a preview image: one row per layer showing where it fires, with the waveform underneath. That's how the agent hears its work and decides what to change.</p>
+    <div class="table">
+      <table>
+        <thead><tr><th scope="col">Tool</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><td class="grp" colspan="2">Make</td></tr>
+          <tr><td>generate_sound</td><td>One of 22 SFX generators, or <code>random</code> with a wildness from 0 to 1</td></tr>
+          <tr><td>variations</td><td>Several candidates at once, or several mutations of a sound to choose from</td></tr>
+          <tr><td>generate_music</td><td>A full 10–60 s track in one of 9 styles, or <code>random</code>, which can mix two</td></tr>
+          <tr><td class="grp" colspan="2">Change</td></tr>
+          <tr><td>remix_music</td><td>New drums, bass, chords or melody for a track, plus key and tempo changes</td></tr>
+          <tr><td>edit_sound</td><td>Change any setting on any layer, or add and remove layers</td></tr>
+          <tr><td>apply_macro</td><td>One-knob changes: pitch, length, punch, grit, space, distance, retro</td></tr>
+          <tr><td>mutate_sound</td><td>A random nudge in the same spirit (keeps songs in tune)</td></tr>
+          <tr><td class="grp" colspan="2">Output</td></tr>
+          <tr><td>render_sound</td><td>WAV in mono or stereo at 22.05, 44.1 or 48 kHz</td></tr>
+          <tr><td>export_pack</td><td>A folder of WAVs plus <code>manifest.json</code> for the game engine</td></tr>
+          <tr><td>play_sound</td><td>Plays a sound on your speakers so you can hear it</td></tr>
+          <tr><td class="grp" colspan="2">Manage</td></tr>
+          <tr><td>list_categories</td><td>Every category, style, macro and the full sound format</td></tr>
+          <tr><td>list_sounds</td><td>What's saved in <code>SFX_DIR</code></td></tr>
+          <tr><td>get_sound · set_sound</td><td>A sound's full JSON, out and in. It's the same format as this editor's JSON button.</td></tr>
+          <tr><td>delete_sound</td><td>Removes a sound and its WAV</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s5">
+    <h2 id="s5">Things to ask</h2>
+    <ul class="prompts">
+      <li><span>Make 4 punch variations, keep the snappiest, then a heavy version with length 1.4 and pitch −3.</span><button class="btn copy" type="button">Copy</button></li>
+      <li><span>Write a 40-second boss track, then keep giving it new drums until the groove feels heavier.</span><button class="btn copy" type="button">Copy</button></li>
+      <li><span>Make 3 random songs at wildness 0.7, play me the best one, and export it mono at 22 kHz.</span><button class="btn copy" type="button">Copy</button></li>
+      <li><span>Roll 6 random sounds at wildness 0.3 and keep the two that sound most like a coin pickup.</span><button class="btn copy" type="button">Copy</button></li>
+      <li><span>Build a full fighting-game pack: light, heavy, block, dash, jump, hurt, KO, menu sounds and a menu loop. Export it with a manifest.</span><button class="btn copy" type="button">Copy</button></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s6">
+    <h2 id="s6">Moving sounds between the agent and this editor</h2>
+    <p>Both use the same <code>sfx-forge/1</code> format and the same engine, so a sound plays identically in both. To edit something the agent made, ask it to <em>get_sound</em>. Then, in the editor, press <strong>JSON</strong>, paste, and choose <strong>Apply</strong>. To go the other way, copy the JSON from the editor and ask the agent to <em>set_sound</em> with it.</p>
+    <p class="muted">Chatting with Claude on claude.ai can't start a server on your computer, so it isn't one of the routes above. Use Claude Desktop or Claude Code instead.</p>
+  </section>
+
+  <footer>
+    <span>SFX Forge · inspired by <a href="https://seq.halfof8.com">SQNCR</a> by halfof8</span>
+    <span><a href="/">Editor</a> · <a href="https://github.com/x0trad/sfxforge">Source on GitHub</a></span>
+  </footer>
+</div>
+
+<script>
+document.querySelectorAll('.copy').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var box = btn.closest('.cmd') || btn.closest('li');
+    var src = box.querySelector('pre') || box.querySelector('span');
+    var text = src.innerText.replace(/…/g, '').trim();
+    function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done('Copied'); }, function () { select(src); done('Selected'); });
+    } else { select(src); done('Selected'); }
+  });
+});
+function select(el) { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+</script>
+</body>
+</html>

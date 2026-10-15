@@ -44,6 +44,8 @@ button[disabled] { opacity: 0.35; cursor: default; }
 .brand b { font-family: var(--f-glyph); font-weight: 400; font-size: 15px; margin-right: 6px; vertical-align: -1px; }
 .spacer { flex: 1; }
 .cats { display: flex; gap: 4px; flex-wrap: wrap; }
+.navlink { color: var(--dim); text-decoration: none; border: 1px solid transparent; padding: 3px 7px; white-space: nowrap; }
+.navlink:hover { color: var(--ink); border-color: var(--line); }
 .cat { display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px; }
 .cat i { font-style: normal; font-family: var(--f-glyph); font-size: 13px; text-transform: none; }
 .rnd { border-color: var(--ink); padding: 4px 9px; font-weight: 400; }
@@ -140,6 +142,7 @@ kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
     </div>
     <div class="namebox"><span class="lbl">NAME</span><input id="name" aria-label="Sound name" maxlength="60"><span class="idtag" id="idtag"></span></div>
     <div class="spacer"></div>
+    <a class="navlink" href="https://sfxforge.vercel.app/connect" target="_blank" rel="noopener" title="Set up Claude Code, Claude Desktop or your own agent to make sounds with SFX Forge">CONNECT AGENT ↗</a>
     <div class="grp">
       <button id="save" title="Save to the shared library">SAVE</button>
       <button id="saveas" title="Save under a new id">SAVE AS NEW</button>

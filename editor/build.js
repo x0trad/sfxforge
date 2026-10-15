@@ -15,3 +15,6 @@ const out = '<!doctype html><html lang="en"><head><meta charset="utf-8">'
   + '<style>[hidden]{display:none!important}body{margin:0}</style></head><body>\n' + body + '\n</body></html>\n';
 for (const name of ['index.html', 'sfx-forge.html']) fs.writeFileSync(path.join(root, 'dist', name), out);
 console.log('dist/index.html + dist/sfx-forge.html', (out.length / 1024).toFixed(0) + ' KB');
+// Static pages that ship as-is.
+for (const page of ['connect.html']) fs.copyFileSync(path.join(__dirname, page), path.join(root, 'dist', page));
+console.log('dist/connect.html');
