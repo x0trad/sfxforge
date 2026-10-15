@@ -1,5 +1,7 @@
 # SFX Forge
 
+**Live editor:** https://sfxforge.vercel.app
+
 A visual game-audio synth for sound effects and short music tracks, plus an MCP server so AI agents can design them too.
 
 Every sound is a small JSON score in the `sfx-forge/1` format: rows are layers, columns are 16th-note steps, and every hit is drawn as a glyph tile. The editor and the MCP server run the same zero-dependency engine (`src/engine.js`), so a sound renders sample-for-sample identically in the browser, in Node, and in your game's asset pipeline.
@@ -14,13 +16,13 @@ Inspired by [SQNCR](https://seq.halfof8.com) by halfof8, where the picture and t
 | `src/server.js` | MCP server over stdio. 14 tools. No dependencies. |
 | `src/png.js` | Preview images (score strip + waveform) so an agent can see what it made. |
 | `editor/editor.src.html` | The visual editor. `npm run build` inlines the engine into `dist/sfx-forge.html`. |
-| `dist/sfx-forge.html` | Built editor, a single file. Open it in a browser or host it on GitHub Pages. |
+| `dist/index.html` | Built editor, a single file (also copied to `dist/sfx-forge.html`). Open it in a browser or host it on GitHub Pages. |
 | `examples/` | A starter kit for a fighting game: 12 SFX and 3 music tracks. |
 | `test/smoke.js` | Spawns the server and exercises every tool. |
 
 ## Editor
 
-Open `dist/sfx-forge.html` in any browser.
+Use it at https://sfxforge.vercel.app, or open `dist/index.html` in any browser.
 
 - **SFX generators:** coin, pickup, jump, laser, shoot, explosion, hit, punch, kick, block, hurt, whoosh, dash, powerup, blip, select, confirm, cancel, magic, KO, victory, game over.
 - **RANDOM (乱):** builds a sound from scratch out of 1 to 4 random layers. WILDNESS goes from tidy blips to layered chaos.

@@ -8,6 +8,10 @@ const src = fs.readFileSync(path.join(__dirname, 'editor.src.html'), 'utf8');
 const engine = fs.readFileSync(path.join(root, 'src', 'engine.js'), 'utf8');
 if (!src.includes('/*__ENGINE__*/')) throw new Error('editor.src.html is missing the /*__ENGINE__*/ placeholder');
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
-const out = src.replace('/*__ENGINE__*/', () => engine);
-fs.writeFileSync(path.join(root, 'dist', 'sfx-forge.html'), out);
-console.log('dist/sfx-forge.html', (out.length / 1024).toFixed(0) + ' KB');
+const body = src.replace('/*__ENGINE__*/', () => engine);
+// Standalone pages need the document shell that Claude's artifact viewer normally adds.
+const out = '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+  + '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+  + '<style>[hidden]{display:none!important}body{margin:0}</style></head><body>\n' + body + '\n</body></html>\n';
+for (const name of ['index.html', 'sfx-forge.html']) fs.writeFileSync(path.join(root, 'dist', name), out);
+console.log('dist/index.html + dist/sfx-forge.html', (out.length / 1024).toFixed(0) + ' KB');
