@@ -22,7 +22,7 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL ' + m); console.log('  ok  
   const init = await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'smoke', version: '0' } });
   ok(init.result.serverInfo.name === 'sfx-mcp', 'initialize');
   const tl = await rpc('tools/list', {});
-  ok(tl.result.tools.length === 14, 'tools/list (' + tl.result.tools.length + ' tools)');
+  ok(tl.result.tools.length === 15, 'tools/list (' + tl.result.tools.length + ' tools)');
   await call('list_categories', {});
   const g = await call('generate_sound', { category: 'punch', seed: 7, id: 'p1' });
   ok(g.content[1].type === 'image' && fs.existsSync(path.join(dir, 'p1.wav')), 'generate_sound → wav + png');
@@ -38,6 +38,10 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL ' + m); console.log('  ok  
   const mj = JSON.parse(mu.content[0].text);
   ok(mj.analysis.duration > 24 && mj.analysis.duration < 40 && mj.music.bpm > 100, 'generate_music (' + mj.analysis.duration + ' s @ ' + mj.music.bpm + ' bpm)');
   await call('apply_macro', { id: 'song', macro: 'length', value: 1.2, save_as: 'song-slow' });
+  const rs = JSON.parse((await call('generate_music', { style: 'random', wildness: 0.9, seconds: 20, seed: 77, id: 'rsong' })).content[0].text);
+  ok(!!rs.music.style && !!rs.music.key, 'generate_music random (' + rs.music.style + ', ' + rs.music.key + ')');
+  const rm = JSON.parse((await call('remix_music', { id: 'rsong', parts: ['drums', 'lead'], transpose: 2, save_as: 'rsong2' })).content[0].text);
+  ok(rm.music.key !== rs.music.key && rm.music.parts.bass === rs.music.parts.bass && rm.music.parts.drums !== rs.music.parts.drums, 'remix_music keeps bass, rerolls drums, transposes');
   const v = await call('variations', { category: 'coin', count: 3 });
   ok(v.content.filter(c => c.type === 'image').length === 3, 'variations');
   const full = JSON.parse((await call('get_sound', { id: 'p1' })).content[0].text);

@@ -43,7 +43,7 @@ function renderTo(snd, opts) {
 }
 function summary(snd) {
   return {
-    id: snd.id, name: snd.name, category: snd.category, style: snd.style, bpm: snd.bpm, seed: snd.seed, length: snd.length, steps: snd.steps, swing: snd.swing || undefined, master: snd.master,
+    id: snd.id, name: snd.name, category: snd.category, style: snd.styleLabel || snd.style, bpm: snd.bpm, key: snd.key, seed: snd.seed, length: snd.length, steps: snd.steps, swing: snd.swing || undefined, master: snd.master,
     layers: snd.layers.map((l, i) => ({ index: i, id: l.id, name: l.name, wave: l.wave, freq: +l.freq.toFixed(1), freqEnd: +l.freqEnd.toFixed(1), slide: l.slide,
       filter: l.filter.type === 'none' ? 'none' : `${l.filter.type} ${Math.round(l.filter.cutoff)}→${Math.round(l.filter.cutoffEnd)}Hz`,
       hits: l.hits.length > 24 ? `${l.hits.length} hits (steps ${l.hits[0].t}–${l.hits[l.hits.length - 1].t}; use get_sound for all)` : l.hits.map(h => `${h.t}${h.note ? (h.note > 0 ? '+' : '') + h.note : ''}`).join(' '), mute: l.mute || undefined })),
@@ -55,6 +55,7 @@ function result(snd, rendered, extra, withAudio) {
   if (rendered && withAudio) content.push({ type: 'audio', data: fs.readFileSync(rendered.out).toString('base64'), mimeType: 'audio/wav' });
   return { content };
 }
+function musicInfo(s) { return { style: s.styleLabel || s.style, bpm: s.bpm, key: s.key, bars: s.bars, sections: s.sections, swing: s.swing, parts: s.compose && s.compose.parts }; }
 function deepMerge(a, b) {
   if (b === null || typeof b !== 'object' || Array.isArray(b)) return b;
   const o = Object.assign({}, a && typeof a === 'object' && !Array.isArray(a) ? a : {});
@@ -96,14 +97,22 @@ const TOOLS = [
       s.id = a.id ? safeId(a.id) : uniqueId(a.category === 'random' ? `${s.name}-${seed.toString(36)}` : `${a.category}-${seed.toString(36)}`); if (a.name) s.name = a.name;
       const saved = save(s); return result(saved, renderTo(saved), null, a.include_audio);
     } },
-  { name: 'generate_music', description: 'Compose a full arranged track (drums, bass, chords, lead melody, arps; intro → A → B → break → outro) of about `seconds` long, rounded to whole 4-bar phrases. Same format as SFX, so edit_sound / apply_macro / render_sound / export_pack all work on it (apply_macro length = tempo change, pitch = key change). Styles: ' + Object.entries(SFX.MUSIC_STYLES).map(([k, v]) => `${k} (${v.blurb})`).join(' '),
-    inputSchema: { type: 'object', properties: { style: { type: 'string', enum: Object.keys(SFX.MUSIC_STYLES) }, seconds: { type: 'number', description: '8-60, default 32' }, bpm: { type: 'number', description: 'optional; defaults to a style-typical tempo' }, seed: { type: 'integer' }, id: { type: 'string' }, name: { type: 'string' }, include_audio: { type: 'boolean' } } },
+  { name: 'generate_music', description: 'Compose a full arranged track (drums, bass, chords, lead melody, arps; intro → A → B → break → outro, with possible cold opens, half-time sections, key changes and different endings) of about `seconds` long, rounded to whole 4-bar phrases. style "random" picks one and, with higher wildness, can mix two styles. Same format as SFX, so edit_sound / apply_macro / render_sound / export_pack all work on it. Use remix_music to reroll one part. Styles: ' + Object.entries(SFX.MUSIC_STYLES).map(([k, v]) => `${k} (${v.blurb})`).join(' '),
+    inputSchema: { type: 'object', properties: { style: { type: 'string', enum: ['random'].concat(Object.keys(SFX.MUSIC_STYLES)) }, seconds: { type: 'number', description: '8-60, default 32' }, wildness: { type: 'number', description: '0-1, default 0.4: more drum mutation, generated progressions, key changes, extra percussion, hybrids' }, bpm: { type: 'number', description: 'optional; defaults to a style-typical tempo' }, seed: { type: 'integer' }, id: { type: 'string' }, name: { type: 'string' }, include_audio: { type: 'boolean' } } },
     run: (a) => {
       const seed = Number.isInteger(a.seed) ? a.seed >>> 0 : (Math.random() * 1e9) >>> 0;
-      const s = SFX.gen('music', seed, { style: a.style, seconds: a.seconds, bpm: a.bpm });
+      const s = SFX.gen('music', seed, { style: a.style, seconds: a.seconds, bpm: a.bpm, wildness: a.wildness });
       s.id = a.id ? safeId(a.id) : uniqueId(`${s.style}-${seed.toString(36)}`); if (a.name) s.name = a.name;
       const saved = save(s); const rd = renderTo(saved);
-      return result(saved, rd, { music: { style: saved.style, bpm: saved.bpm, bars: saved.bars, swing: saved.swing } }, a.include_audio);
+      return result(saved, rd, { music: musicInfo(saved) }, a.include_audio);
+    } },
+  { name: 'remix_music', description: 'Reroll parts of a composed track while keeping the rest: parts drums, bass, chords (also moves bass and melody notes to the new harmony, keeping their rhythm), lead (melody + arp). Can also transpose (semitones) or change bpm. Overwrites unless save_as is given.',
+    inputSchema: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, parts: { type: 'array', items: { type: 'string', enum: SFX.MUSIC_PARTS } }, transpose: { type: 'integer' }, bpm: { type: 'number' }, wildness: { type: 'number' }, seed: { type: 'integer' }, save_as: { type: 'string' }, include_audio: { type: 'boolean' } } },
+    run: (a) => {
+      const s = SFX.remix(load(a.id), { parts: a.parts, transpose: a.transpose, bpm: a.bpm, wildness: a.wildness, seed: a.seed });
+      s.id = a.save_as ? safeId(a.save_as) : a.id;
+      const saved = save(s); const rd = renderTo(saved);
+      return result(saved, rd, { music: musicInfo(saved) }, a.include_audio);
     } },
   { name: 'variations', description: 'Generate N candidates (different seeds) for a category, or N mutations of an existing sound. Saves and renders each; returns one preview per candidate so you can pick. Delete the losers with delete_sound.',
     inputSchema: { type: 'object', properties: { category: { type: 'string', description: 'random for from-scratch rolls, or a category' }, wildness: { type: 'number', description: 'random only, 0-1' }, from_id: { type: 'string', description: 'mutate this sound instead of using a category' }, count: { type: 'integer', minimum: 1, maximum: 8 }, amount: { type: 'number', description: 'mutation amount 0-1 (from_id only), default 0.3' }, prefix: { type: 'string' } } },
@@ -179,7 +188,7 @@ async function handle(msg) {
     switch (method) {
       case 'initialize':
         return reply({ protocolVersion: (params && params.protocolVersion) || '2025-06-18', capabilities: { tools: {} }, serverInfo: SERVER,
-          instructions: 'Design game sound effects and music. For music use generate_music. For SFX start with generate_sound or variations (look at the preview image), refine with edit_sound / apply_macro / mutate_sound, then export_pack. Sounds use the sfx-forge/1 JSON shared with the SFX Forge editor.' });
+          instructions: 'Design game sound effects and music. For music use generate_music, then remix_music to reroll a part. For SFX start with generate_sound or variations (look at the preview image), refine with edit_sound / apply_macro / mutate_sound, then export_pack. Sounds use the sfx-forge/1 JSON shared with the SFX Forge editor.' });
       case 'notifications/initialized': case 'notifications/cancelled': return;
       case 'ping': return reply({});
       case 'tools/list': return reply({ tools: TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) });

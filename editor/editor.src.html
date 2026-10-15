@@ -35,7 +35,7 @@ button:hover { border-color: var(--dim); }
 button.on, button:active { background: var(--ink); color: var(--ground); border-color: var(--ink); }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
 button[disabled] { opacity: 0.35; cursor: default; }
-.app { display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 10px; height: 100%; min-height: 560px; }
+.app { display: grid; grid-template-rows: auto auto auto auto 1fr auto; gap: 10px; height: 100%; min-height: 560px; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 .grp { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .lbl { color: var(--faint); }
@@ -53,6 +53,8 @@ button[disabled] { opacity: 0.35; cursor: default; }
 .music .lbl.big { color: var(--ink); }
 .music .cat i { font-size: 15px; }
 .music label output { width: 5ch; font-variant-numeric: tabular-nums; }
+#remixBar output { min-width: 9ch; text-align: center; font-variant-numeric: tabular-nums; text-transform: none; }
+#remixBar button[data-part] { border-color: var(--dim); }
 .hist { display: flex; gap: 4px; align-items: center; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; padding-bottom: 2px; }
 .hist .lbl { flex: none; margin-right: 4px; }
 .hist button { flex: none; display: inline-flex; gap: 5px; align-items: center; text-transform: none; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; }
@@ -162,6 +164,19 @@ kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
     <span class="note" id="styleBlurb"></span>
   </div>
 
+  <div class="bar music" id="remixBar" hidden>
+    <span class="lbl">REMIX</span>
+    <div class="grp">
+      <button data-part="drums" title="New drum pattern and kit, same song (1)">NEW DRUMS</button>
+      <button data-part="bass" title="New bass line and sound (2)">NEW BASS</button>
+      <button data-part="chords" title="New chord progression and voicing; bass and melody follow (3)">NEW CHORDS</button>
+      <button data-part="lead" title="New melody and arp (4)">NEW MELODY</button>
+    </div>
+    <div class="grp"><span class="lbl">KEY</span><button data-tr="-1" title="Down a semitone">−</button><output id="keyOut"></output><button data-tr="1" title="Up a semitone">+</button></div>
+    <div class="grp"><span class="lbl">TEMPO</span><button data-bpm="-5" title="5 BPM slower">−</button><output id="bpmOut"></output><button data-bpm="5" title="5 BPM faster">+</button></div>
+    <span class="note" id="remixNote"></span>
+  </div>
+
   <div class="main">
     <div class="col">
       <div class="sec">
@@ -204,7 +219,7 @@ kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
     <div class="col" id="params"></div>
   </div>
 
-  <div class="note"><kbd>Space</kbd> play · <kbd>R</kbd> random · <kbd>G</kbd> new seed · <kbd>M</kbd> mutate · <kbd>[</kbd> <kbd>]</kbd> step through history · click a cell to place a hit, double-click to remove · sounds use the sfx-forge/1 format shared with sfx-mcp</div>
+  <div class="note"><kbd>Space</kbd> play · <kbd>R</kbd> random sound · <kbd>Shift R</kbd> random song · <kbd>1</kbd>–<kbd>4</kbd> new drums / bass / chords / melody · <kbd>G</kbd> new seed · <kbd>M</kbd> mutate · <kbd>[</kbd> <kbd>]</kbd> step through history · click a cell to place a hit, double-click to remove · sounds use the sfx-forge/1 format shared with sfx-mcp</div>
 </div>
 
 <script id="engineSrc">
@@ -272,7 +287,7 @@ kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
   function finishRender(r) {
     res = r; ana = S.analyze(res, 48);
     const dur = ana.duration >= 2 ? ana.duration.toFixed(1) + ' s' : Math.round(ana.duration * 1000) + ' ms';
-    const tempo = snd.category === 'music' ? `<span>TEMPO <b>${Math.round(snd.steps / 4 / snd.length * 60)} BPM</b></span><span>BARS <b>${Math.round(snd.steps / 16)}</b></span><span>STYLE <b>${(S.MUSIC_STYLES[snd.style] || {}).label || '—'}</b></span>` : `<span>ATTACK <b>${ana.attackMs} ms</b></span><span>TONE <b>${ana.character}</b></span>`;
+    const tempo = snd.category === 'music' ? `<span>TEMPO <b>${Math.round(snd.steps / 4 / snd.length * 60)} BPM</b></span><span>BARS <b>${Math.round(snd.steps / 16)}</b></span><span>STYLE <b>${snd.styleLabel || (S.MUSIC_STYLES[snd.style] || {}).label || '—'}</b></span>${snd.key ? `<span>KEY <b>${snd.key.split(' (')[0]}</b></span>` : ''}` : `<span>ATTACK <b>${ana.attackMs} ms</b></span><span>TONE <b>${ana.character}</b></span>`;
     $('stats').innerHTML = `<span>DUR <b>${dur}</b></span><span>PEAK <b>${ana.peakDb} dB</b></span><span>RMS <b>${ana.rmsDb} dB</b></span>${tempo}<span>LAYERS <b>${snd.layers.length}</b></span><span>SEED <b>${snd.seed}</b></span>`;
     $('bigkanji').textContent = kanjiOf(snd);
     paintStatic(); frame();
@@ -283,7 +298,7 @@ kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
     snd = S.normalize(c); sel = 0; selHit = -1; res = null; again = false;
     $('name').value = snd.name; $('idtag').textContent = snd.id;
     setDirty(!(opts && opts.clean));
-    buildLayers(); buildParams(); renderLib(); highlightCat(); doRender();
+    buildLayers(); buildParams(); renderLib(); highlightCat(); updateRemixBar(); doRender();
   }
 
   // ---------- glyphs ----------
@@ -496,16 +511,41 @@ kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
     loadSound(makeSound(cat, seed)); remember(); play();
   }
   $('rand').onclick = () => generate('random');
+  let lastMusicStyle = 'random';
   function compose(style, seed) {
     seed = seed == null ? (Math.random() * 1e9) >>> 0 : seed;
-    keepCurrent();
-    const s = S.gen('music', seed, { style, seconds: +$('songLen').value });
-    s.id = style + '-' + seed.toString(36);
+    keepCurrent(); lastMusicStyle = style;
+    const s = S.gen('music', seed, { style, seconds: +$('songLen').value, wildness: wildness() });
+    s.id = s.style + '-' + seed.toString(36);
     loadSound(s); remember(); play();
-    status(S.MUSIC_STYLES[style].label + ' · ' + s.bpm + ' BPM · ' + s.bars + ' bars. Space stops, LOOP repeats it, G writes another.', 'good');
+    status(s.styleLabel + ' · ' + s.key.split(' (')[0] + ' · ' + s.bpm + ' BPM · ' + s.bars + ' bars · ' + s.sections.join(' ') + '. REMIX rerolls one part; G writes another.', 'good');
+  }
+  function remixWith(opts, label) {
+    if (!snd.compose) { status('This track was made before remixing existed. Generate a new one to remix it.', 'err'); return; }
+    keepCurrent();
+    let s; try { s = S.remix(snd, opts); } catch (e) { status(e.message, 'err'); return; }
+    loadSound(s); remember(snd.name + ' · ' + label); play();
+    status(label.toUpperCase() + ' · ' + s.key.split(' (')[0] + ' · ' + s.bpm + ' BPM', 'good');
+  }
+  const PART_LABEL = { drums: 'new drums', bass: 'new bass', chords: 'new chords', lead: 'new melody' };
+  document.querySelectorAll('#remixBar [data-part]').forEach(b => b.onclick = () => remixWith({ parts: [b.dataset.part] }, PART_LABEL[b.dataset.part]));
+  document.querySelectorAll('#remixBar [data-tr]').forEach(b => b.onclick = () => remixWith({ transpose: +b.dataset.tr }, (+b.dataset.tr > 0 ? 'key up' : 'key down')));
+  document.querySelectorAll('#remixBar [data-bpm]').forEach(b => b.onclick = () => remixWith({ bpm: snd.compose.bpm + +b.dataset.bpm }, (+b.dataset.bpm > 0 ? 'faster' : 'slower')));
+  function updateRemixBar() {
+    const on = snd && snd.category === 'music';
+    $('remixBar').hidden = !on; if (!on) return;
+    const can = !!snd.compose;
+    $('remixBar').querySelectorAll('button').forEach(b => { b.disabled = !can; });
+    $('keyOut').textContent = can ? snd.key.split(' (')[0] : '—';
+    $('bpmOut').textContent = can ? snd.compose.bpm + ' BPM' : '—';
+    $('remixNote').textContent = can ? (snd.sections || []).join(' · ') : 'Made with an older version: generate a new track to remix.';
   }
   (function buildStyles() {
     const host = $('styles');
+    const rb = document.createElement('button'); rb.className = 'cat rnd'; rb.title = 'Random style; with high WILDNESS it can mix two styles (Shift+R)';
+    rb.innerHTML = '<i>乱</i>RANDOM SONG'; rb.onclick = () => compose('random');
+    rb.onmouseenter = rb.onfocus = () => { $('styleBlurb').textContent = 'Any style. WILDNESS above ~40% can mash two styles together and adds key changes, half-time sections and extra percussion.'; };
+    host.appendChild(rb);
     for (const [id, st] of Object.entries(S.MUSIC_STYLES)) {
       const b = document.createElement('button'); b.className = 'cat'; b.dataset.style = id; b.title = st.blurb;
       b.innerHTML = `<i>${st.kanji}</i>${st.label}`; b.onclick = () => compose(id);
@@ -831,7 +871,7 @@ Noise uses freq as grain rate: low freq = crunchy, high = hiss. metal = inharmon
   $('play').onclick = () => playing ? stop() : play();
   $('loop').onclick = () => { looping = !looping; $('loop').classList.toggle('on', looping); if (looping && !playing) play(); };
   $('mutate').onclick = () => { keepCurrent(); snd = S.mutate(snd, +$('mutAmt').value, (Math.random() * 1e9) >>> 0); changed({ panel: true, layers: true }); clearTimeout(rTimer); doRender(); remember(snd.name + ' ~'); play(); };
-  $('reroll').onclick = () => snd.category === 'music' && S.MUSIC_STYLES[snd.style] ? compose(snd.style) : generate(S.CATEGORIES.includes(snd.category) ? snd.category : 'blip');
+  $('reroll').onclick = () => snd.category === 'music' ? compose(lastMusicStyle === 'random' ? 'random' : snd.style) : generate(S.CATEGORIES.includes(snd.category) ? snd.category : 'blip');
   $('name').oninput = () => { snd.name = $('name').value || 'untitled'; setDirty(true); };
   document.addEventListener('keydown', (e) => {
     const t = e.target, tag = t && t.tagName;
@@ -839,7 +879,9 @@ Noise uses freq as grain rate: low freq = crunchy, high = hiss. metal = inharmon
     if (e.code === 'Space') { e.preventDefault(); playing ? stop() : play(); }
     else if (e.key === 'g' || e.key === 'G') $('reroll').click();
     else if (e.key === 'm' || e.key === 'M') $('mutate').click();
-    else if (e.key === 'r' || e.key === 'R') $('rand').click();
+    else if (e.key === 'R' && e.shiftKey) compose('random');
+    else if (e.key === 'r') $('rand').click();
+    else if (/^[1-4]$/.test(e.key) && snd.category === 'music' && snd.compose) remixWith({ parts: [S.MUSIC_PARTS[+e.key - 1]] }, PART_LABEL[S.MUSIC_PARTS[+e.key - 1]]);
     else if (e.key === '[') goHist(histPos + 1);
     else if (e.key === ']') goHist(histPos - 1);
   });
