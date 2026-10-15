@@ -60,6 +60,13 @@ Add it to your MCP client (Claude Desktop, Claude Code, or any MCP host):
 
 Claude Code: `claude mcp add --transport stdio --scope project --env SFX_DIR=$PWD/assets/sfx sfx -- node /ABSOLUTE/PATH/sfx-forge/src/server.js`
 
+Your own agent on the Claude API (for example a Python orchestrator): the API's built-in MCP connector only reaches public HTTPS servers, so run sfx-mcp from your code instead. `examples/agents/claude_api_bridge.py` does this in about 60 lines. It starts the server over stdio, offers its tools to Claude, passes results and preview images back, and takes an optional tool allowlist (`SFX_TOOLS`).
+
+```bash
+pip install anthropic mcp
+SFX_DIR=./assets/sfx python examples/agents/claude_api_bridge.py "Make a heavy punch and a 30 second boss track, then export a pack"
+```
+
 | Tool | What it does |
 |---|---|
 | `list_categories` | Generators, music styles, macros, waves and the format reference |
