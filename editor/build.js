@@ -10,11 +10,16 @@ if (!src.includes('/*__ENGINE__*/')) throw new Error('editor.src.html is missing
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 const body = src.replace('/*__ENGINE__*/', () => engine);
 // Standalone pages need the document shell that Claude's artifact viewer normally adds.
-const out = '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+// Chrome's WebMCP origin trial: register sfxforge.vercel.app at
+// https://developer.chrome.com/origintrials and set the token as WEBMCP_OT_TOKEN (e.g. a Vercel env var).
+const ot = (process.env.WEBMCP_OT_TOKEN || '').trim();
+if (ot && !/^[A-Za-z0-9+/=]+$/.test(ot)) throw new Error('WEBMCP_OT_TOKEN does not look like an origin trial token');
+const otMeta = ot ? '<meta http-equiv="origin-trial" content="' + ot + '">' : '';
+const out = '<!doctype html><html lang="en"><head><meta charset="utf-8">' + otMeta
   + '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
   + '<style>[hidden]{display:none!important}body{margin:0}</style></head><body>\n' + body + '\n</body></html>\n';
 for (const name of ['index.html', 'sfx-forge.html']) fs.writeFileSync(path.join(root, 'dist', name), out);
-console.log('dist/index.html + dist/sfx-forge.html', (out.length / 1024).toFixed(0) + ' KB');
+console.log('dist/index.html + dist/sfx-forge.html', (out.length / 1024).toFixed(0) + ' KB', ot ? '(WebMCP origin trial token included)' : '(no WebMCP origin trial token)');
 // Static pages that ship as-is.
 for (const page of ['connect.html']) fs.copyFileSync(path.join(__dirname, page), path.join(root, 'dist', page));
 console.log('dist/connect.html');

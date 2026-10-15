@@ -45,6 +45,7 @@ button[disabled] { opacity: 0.35; cursor: default; }
 .cats { display: flex; gap: 4px; flex-wrap: wrap; }
 .navlink { color: var(--dim); text-decoration: none; border: 1px solid transparent; padding: 3px 7px; white-space: nowrap; }
 .navlink:hover { color: var(--ink); border-color: var(--line); }
+#webmcpBadge { color: var(--ok); border-color: var(--ok); cursor: default; }
 .cat { display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px; }
 .cat i { font-style: normal; font-family: var(--f-glyph); font-size: 13px; text-transform: none; }
 .rnd { border-color: var(--ink); padding: 4px 9px; font-weight: 400; }
@@ -141,6 +142,7 @@ kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
     </div>
     <div class="namebox"><span class="lbl">NAME</span><input id="name" aria-label="Sound name" maxlength="60"><span class="idtag" id="idtag"></span></div>
     <div class="spacer"></div>
+    <span class="navlink" id="webmcpBadge" hidden title="This page offers its tools to AI agents in your browser through WebMCP"></span>
     <a class="navlink" href="https://sfxforge.vercel.app/connect" target="_blank" rel="noopener" title="Set up Claude Code, Claude Desktop or your own agent to make sounds with SFX Forge">CONNECT AGENT ↗</a>
     <div class="grp">
       <button id="save" title="Save to the shared library">SAVE</button>
@@ -294,7 +296,10 @@ kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
     $('stats').innerHTML = `<span>DUR <b>${dur}</b></span><span>PEAK <b>${ana.peakDb} dB</b></span><span>RMS <b>${ana.rmsDb} dB</b></span>${tempo}<span>LAYERS <b>${snd.layers.length}</b></span><span>SEED <b>${snd.seed}</b></span>`;
     $('bigkanji').textContent = kanjiOf(snd);
     paintStatic(); frame();
+    const w = renderWaiters; renderWaiters = []; w.forEach(f => f());
   }
+  let renderWaiters = [];
+  const rendered = () => new Promise(r => { if (!pendingJob && res) r(); else renderWaiters.push(r); });
   function loadSound(s, opts) {
     stop();
     const c = clone(s); delete c.rev; delete c.updatedAt; delete c.by;
@@ -888,6 +893,144 @@ Noise uses freq as grain rate: low freq = crunchy, high = hiss. metal = inharmon
     else if (e.key === '[') goHist(histPos + 1);
     else if (e.key === ']') goHist(histPos - 1);
   });
+
+  // ---------- WebMCP ----------
+  // Offers the editor's controls as tools to an AI agent running in the browser (WebMCP, Chrome 149+
+  // origin trial, or chrome://flags/#enable-webmcp-testing). Every tool drives the live editor, so the
+  // person watching sees each change and every result lands in the history strip.
+  // The same tools are on window.sfxForge for agents that run page scripts instead.
+  function summary(extra) {
+    const o = { id: snd.id, name: snd.name, category: snd.category };
+    if (snd.category === 'music') Object.assign(o, { style: snd.styleLabel || snd.style, key: snd.key, bpm: snd.bpm, bars: snd.bars, sections: snd.sections, remixable: !!snd.compose });
+    if (ana) Object.assign(o, { durationSec: ana.duration, peakDb: ana.peakDb, rmsDb: ana.rmsDb, attackMs: ana.attackMs, tone: ana.character, envelope: ana.envelope.filter((_, i) => i % 4 === 0) });
+    o.layers = snd.layers.map((l, i) => `${i}: ${l.name} (${l.wave}${l.mute ? ', muted' : ''}, ${l.hits.length} hit${l.hits.length === 1 ? '' : 's'})`);
+    o.seed = snd.seed;
+    return JSON.stringify(Object.assign(o, extra || {}));
+  }
+  const after = async (label, extra) => { remember(label); await rendered(); return summary(extra); };
+  const mergeDeep = (a, b) => {
+    if (b === null || typeof b !== 'object' || Array.isArray(b)) return b;
+    const o = Object.assign({}, a && typeof a === 'object' && !Array.isArray(a) ? a : {});
+    for (const k of Object.keys(b)) o[k] = mergeDeep(o[k], b[k]);
+    return o;
+  };
+  const layerIndex = (ref) => {
+    const i = typeof ref === 'number' ? ref : snd.layers.findIndex(l => l.id === ref || l.name === ref);
+    if (i < 0 || i >= snd.layers.length) throw new Error(`No layer ${JSON.stringify(ref)}. Layers: ${snd.layers.map((l, k) => k + ' ' + l.name).join(', ')}`);
+    return i;
+  };
+  const setWild = (w) => { if (typeof w === 'number' && isFinite(w)) { $('wild').value = Math.round(Math.max(0, Math.min(1, w)) * 100); $('wildOut').textContent = $('wild').value + '%'; } return wildness(); };
+  const MUSIC_IDS = Object.keys(S.MUSIC_STYLES);
+  const WEB_TOOLS = [
+    { name: 'sfx_describe', description: 'Describe SFX Forge: sound-effect categories, music styles, macros and remixable parts, plus a summary of the sound currently loaded in the editor. Call this first.',
+      inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true },
+      execute: async () => JSON.stringify({
+        categories: S.CATEGORIES, musicStyles: Object.fromEntries(MUSIC_IDS.map(k => [k, S.MUSIC_STYLES[k].blurb])),
+        macros: Object.fromEntries(Object.entries(S.MACROS).map(([k, v]) => [k, v.blurb])), musicParts: S.MUSIC_PARTS, waves: S.WAVES,
+        current: JSON.parse(summary()),
+        tips: 'Results are numbers, not audio: judge by duration, loudness, attack, tone and envelope. Ask the person to listen (sfx_play) before exporting.' }) },
+    { name: 'sfx_generate_sound', description: 'Generate a new sound effect in the editor from a category generator, or "random" to build one from scratch. Returns its stats.',
+      inputSchema: { type: 'object', required: ['category'], properties: {
+        category: { type: 'string', enum: S.CATEGORIES, description: 'e.g. punch, coin, laser, explosion, ko, or random' },
+        wildness: { type: 'number', minimum: 0, maximum: 1, description: 'random only: 0 = tidy and short, 1 = layered and strange' },
+        seed: { type: 'integer', description: 'Same seed + category gives the same sound' } } },
+      execute: async ({ category, wildness: w, seed }) => {
+        if (!S.CATEGORIES.includes(category)) throw new Error('Unknown category. Use one of: ' + S.CATEGORIES.join(', '));
+        setWild(w); keepCurrent();
+        loadSound(makeSound(category, Number.isInteger(seed) ? seed >>> 0 : (Math.random() * 1e9) >>> 0));
+        return after();
+      } },
+    { name: 'sfx_compose_music', description: 'Compose a full arranged music track (drums, bass, chords, melody; intro → A → B → outro) in the editor. Length is rounded to whole 4-bar sections.',
+      inputSchema: { type: 'object', properties: {
+        style: { type: 'string', enum: ['random'].concat(MUSIC_IDS), description: '"random" picks one and, with high wildness, can mix two styles' },
+        seconds: { type: 'number', minimum: 10, maximum: 60, description: 'Default 32' },
+        wildness: { type: 'number', minimum: 0, maximum: 1, description: 'More drum variation, generated chords, key changes, hybrids' },
+        bpm: { type: 'number', minimum: 50, maximum: 220 }, seed: { type: 'integer' } } },
+      execute: async ({ style, seconds, wildness: w, bpm, seed }) => {
+        style = style || 'random';
+        if (style !== 'random' && !S.MUSIC_STYLES[style]) throw new Error('Unknown style. Use random or one of: ' + MUSIC_IDS.join(', '));
+        const sec = Math.max(10, Math.min(60, Number(seconds) || +$('songLen').value));
+        $('songLen').value = Math.round(sec / 2) * 2; $('songLenOut').textContent = $('songLen').value + ' s';
+        const wv = setWild(w); keepCurrent(); lastMusicStyle = style;
+        const sd = Number.isInteger(seed) ? seed >>> 0 : (Math.random() * 1e9) >>> 0;
+        const t = S.gen('music', sd, { style, seconds: sec, wildness: wv, bpm });
+        t.id = t.style + '-' + sd.toString(36);
+        loadSound(t);
+        return after();
+      } },
+    { name: 'sfx_remix_music', description: 'Change the loaded music track: reroll some parts (drums, bass, chords, lead) while keeping the rest, and/or transpose or change tempo. New chords also move bass and melody notes to the new harmony.',
+      inputSchema: { type: 'object', properties: {
+        parts: { type: 'array', items: { type: 'string', enum: S.MUSIC_PARTS } },
+        transpose: { type: 'integer', minimum: -12, maximum: 12, description: 'Semitones' },
+        bpm: { type: 'number', minimum: 50, maximum: 220 } } },
+      execute: async ({ parts, transpose, bpm }) => {
+        if (snd.category !== 'music' || !snd.compose) throw new Error('Load a music track made with sfx_compose_music first.');
+        keepCurrent();
+        loadSound(S.remix(snd, { parts: parts || [], transpose, bpm }));
+        return after(snd.name + ' · remix');
+      } },
+    { name: 'sfx_get_sound', description: 'Read the sound loaded in the editor: stats, layers, and optionally the full sfx-forge/1 JSON (for editing or saving elsewhere).',
+      inputSchema: { type: 'object', properties: { include_json: { type: 'boolean', description: 'Include the full JSON (can be large for music)' } } }, annotations: { readOnlyHint: true },
+      execute: async ({ include_json }) => { await rendered(); return summary(include_json ? { json: S.normalize(snd) } : null); } },
+    { name: 'sfx_load_sound', description: 'Load a full sfx-forge/1 JSON sound into the editor, for example one made by the sfx MCP server.',
+      inputSchema: { type: 'object', required: ['sound'], properties: { sound: { type: 'object', description: 'A full sfx-forge/1 sound object' } } },
+      execute: async ({ sound }) => {
+        if (!sound || !Array.isArray(sound.layers)) throw new Error('sound must be an sfx-forge/1 object with a layers array.');
+        const o = clone(sound); if (!o.id) o.id = slug(o.name || 'sound');
+        keepCurrent(); loadSound(o); return after();
+      } },
+    { name: 'sfx_edit_sound', description: 'Edit the loaded sound. "patch" deep-merges into top-level fields (name, length, steps, swing, master). "layers" deep-merges into layers by index or name; arrays such as hits are replaced whole. Layer fields: wave, freq, freqEnd, slide, amp {a,h,d,s,r}, filter {type,cutoff,cutoffEnd,q}, vib, fm, crush, drive, gain, pan, repeat, hits [{t,note,vel,len}], mute.',
+      inputSchema: { type: 'object', properties: {
+        patch: { type: 'object' },
+        layers: { type: 'array', items: { type: 'object', required: ['layer', 'set'], properties: { layer: { type: ['integer', 'string'] }, set: { type: 'object' } } } } } },
+      execute: async ({ patch, layers }) => {
+        let n = clone(snd);
+        if (patch) { const p = Object.assign({}, patch); delete p.layers; delete p.id; n = mergeDeep(n, p); }
+        for (const e of layers || []) { const i = layerIndex(e.layer); n.layers[i] = mergeDeep(n.layers[i], e.set); }
+        keepCurrent(); loadSound(n); return after(snd.name + ' · edit');
+      } },
+    { name: 'sfx_apply_macro', description: 'Bend the whole sound with one knob: pitch (semitones, -24..24), length (time stretch 0.25..4; for music this changes tempo), punch, grit, space, distance, retro (0..1).',
+      inputSchema: { type: 'object', required: ['macro', 'value'], properties: { macro: { type: 'string', enum: Object.keys(S.MACROS) }, value: { type: 'number' } } },
+      execute: async ({ macro, value }) => { keepCurrent(); loadSound(S.applyMacro(snd, macro, value)); return after(snd.name + ' · ' + macro); } },
+    { name: 'sfx_mutate', description: 'Randomly nudge pitch, timing, filters and gains of the loaded sound (music stays in tune).',
+      inputSchema: { type: 'object', properties: { amount: { type: 'number', minimum: 0, maximum: 1, description: 'Default 0.25' } } },
+      execute: async ({ amount }) => { keepCurrent(); loadSound(S.mutate(snd, amount == null ? 0.25 : amount, (Math.random() * 1e9) >>> 0)); return after(snd.name + ' ~'); } },
+    { name: 'sfx_play', description: 'Play the loaded sound through the speakers so the person can hear it, or stop playback. Browsers only allow sound after the person has clicked the page once.',
+      inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['play', 'stop'], description: 'Default play' }, loop: { type: 'boolean' } } },
+      execute: async ({ action, loop }) => {
+        if (action === 'stop') { looping = false; $('loop').classList.remove('on'); stop(); return 'Stopped.'; }
+        if (typeof loop === 'boolean') { looping = loop; $('loop').classList.toggle('on', loop); }
+        await rendered(); play();
+        await new Promise(r => setTimeout(r, 150));
+        if (!ac || ac.state !== 'running') return 'The browser is holding audio until the person clicks anywhere on the page. Ask them to click once, then call sfx_play again.';
+        return `Playing ${snd.name} (${ana ? ana.duration + ' s' : ''})${looping ? ', looping' : ''}.`;
+      } },
+    { name: 'sfx_history', description: 'List the history strip (every roll, remix and edit this session) or go back to an earlier entry by index (0 = newest).',
+      inputSchema: { type: 'object', properties: { go_to: { type: 'integer', minimum: 0, description: 'Omit to just list' } } }, annotations: { readOnlyHint: false },
+      execute: async ({ go_to }) => {
+        if (Number.isInteger(go_to)) { if (go_to >= hist.length) throw new Error('History has ' + hist.length + ' entries (0-' + (hist.length - 1) + ').'); goHist(go_to); await rendered(); }
+        return JSON.stringify({ current: histPos, entries: hist.map((h, i) => i + ': ' + h.label) });
+      } },
+    { name: 'sfx_export', description: 'Download the loaded sound to the person\'s computer as a 16-bit stereo WAV, or as sfx-forge/1 JSON.',
+      inputSchema: { type: 'object', properties: { format: { type: 'string', enum: ['wav', 'json'], description: 'Default wav' } } }, annotations: { consequentialHint: true },
+      execute: async ({ format }) => {
+        await rendered();
+        if (format === 'json') await saveFile(snd.id + '.sfx.json', JSON.stringify(S.normalize(snd), null, 2), 'application/json');
+        else await saveFile(snd.id + '.wav', S.encodeWav(res), 'audio/wav');
+        return `Downloaded ${snd.id}.${format === 'json' ? 'sfx.json' : 'wav'}.`;
+      } },
+  ];
+  window.sfxForge = Object.freeze({ version: 1, tools: WEB_TOOLS.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
+    call: (name, args) => { const t = WEB_TOOLS.find(x => x.name === name); if (!t) return Promise.reject(new Error('Unknown tool ' + name)); return t.execute(args || {}, {}); } });
+  (async function registerWebMcp() {
+    const mc = document.modelContext || navigator.modelContext;
+    if (!mc || typeof mc.registerTool !== 'function') return;
+    const ctl = new AbortController(); let ok = 0;
+    for (const t of WEB_TOOLS) {
+      try { await mc.registerTool(t, { signal: ctl.signal }); ok++; } catch (e) { console.warn('[sfx-forge] WebMCP could not register', t.name, e); }
+    }
+    if (ok) { const b = $('webmcpBadge'); b.textContent = 'WEBMCP · ' + ok + ' TOOLS'; b.hidden = false; console.info('[sfx-forge] WebMCP: registered ' + ok + ' tools'); }
+  })();
 
   // ---------- boot ----------
   buildCats(); buildMacros();

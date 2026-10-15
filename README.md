@@ -91,6 +91,25 @@ Example prompts:
 - "Make 3 random songs at wildness 0.7, keep the best one, then give it new drums until the groove is heavier."
 - "Roll 6 random sounds at wildness 0.3 and keep the two that sound most like a coin pickup."
 
+## WebMCP (agents in the browser)
+
+The editor page also registers its controls as [WebMCP](https://developer.chrome.com/docs/ai/webmcp) tools, so an AI agent running in the browser can drive it directly. When registration succeeds the top bar shows `WEBMCP · 12 TOOLS`.
+
+| Browser tool | What it does in the editor |
+|---|---|
+| `sfx_describe` | Categories, styles, macros and the sound on screen |
+| `sfx_generate_sound` | A new sound effect from a category, or `random` |
+| `sfx_compose_music` | A full track in a style, or `random` |
+| `sfx_remix_music` | New drums, bass, chords or melody; key and tempo |
+| `sfx_edit_sound`, `sfx_apply_macro`, `sfx_mutate` | Change layers, bend the whole sound, nudge it |
+| `sfx_get_sound`, `sfx_load_sound` | Read the sound (with JSON), or load one in |
+| `sfx_play`, `sfx_history`, `sfx_export` | Play or stop, go back in history, download WAV or JSON |
+
+- WebMCP is in a Chrome origin trial (Chrome 149+) and the API is still changing. To try it locally, enable `chrome://flags/#enable-webmcp-testing`.
+- To turn it on for every visitor to a deployment, register its origin for the WebMCP trial at [Chrome Origin Trials](https://developer.chrome.com/origintrials/) and set the token as the `WEBMCP_OT_TOKEN` environment variable. `npm run build` adds the `origin-trial` meta tag.
+- The same tools are available to page scripts as `window.sfxForge.tools` and `window.sfxForge.call(name, args)`, for agents that automate the page with scripts instead.
+- Tools return text (stats as JSON), not audio or images. Inside a claude.ai artifact the page runs in a sandboxed frame, so WebMCP only works on the hosted site.
+
 ## Format `sfx-forge/1`
 
 ```jsonc

@@ -119,7 +119,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   <header class="hero">
     <div class="kanji" aria-hidden="true">繋</div>
     <div>
-      <p class="eyebrow">MCP server · 15 tools · Node 18+, no dependencies</p>
+      <p class="eyebrow">MCP server · 15 tools · Node 18+, no dependencies · WebMCP in the browser</p>
       <h1>Connect an agent</h1>
       <p class="lede">Give Claude, or your own agent, the same synth as this editor. It can roll sound effects, compose and remix music, look at a preview of each sound, and export a pack of WAVs straight into your game's folder.</p>
     </div>
@@ -198,6 +198,40 @@ import claude_api_bridge as sfx
 
 asyncio.run(sfx.run("Give the dash move a whooshier sound and export the pack"))</pre></div>
         <p class="note"><code>SFX_TOOLS</code> is an allowlist. Leave out <code>delete_sound</code> or <code>play_sound</code> for agents that shouldn't use them. Other models that support tool calling (MiniMax, DeepSeek and so on) work the same way: only the model call changes. Models that can't read images still get the numbers but won't see the waveform previews.</p>
+      </article>
+      <article class="route" id="webmcp">
+        <div class="route-head">
+          <div class="tag" aria-hidden="true">D</div>
+          <div class="who"><h3>An agent in your browser (WebMCP)</h3><p>Nothing to install. The editor page offers its own controls to an AI agent running in the browser.</p></div>
+          <span class="chip" style="border-color:var(--sand);color:var(--sand)">Experimental</span>
+        </div>
+        <p><a href="https://developer.chrome.com/docs/ai/webmcp">WebMCP</a> is a new browser standard: a web page registers tools that agents in the browser can call directly, instead of clicking around the screen. When the editor is open in a browser that supports it, it registers 12 tools and shows a green <code>WEBMCP · 12 TOOLS</code> badge in its top bar. The agent drives the live editor, so you watch every change happen and each step lands in the history strip.</p>
+        <ol class="steps">
+          <li>Use Chrome 149 or newer. Until this site joins Chrome's origin trial, turn the feature on yourself: open <code>chrome://flags/#enable-webmcp-testing</code>, set it to <strong>Enabled</strong> and relaunch.</li>
+          <li>Open <a href="/">the editor</a> and check for the badge in the top bar.</li>
+          <li>Use an agent that speaks WebMCP. Today that mostly means extensions, such as Chrome's <a href="https://github.com/beaufortfrancois/model-context-tool-inspector">Model Context Tool Inspector</a>, which lists the tools and can run them by hand or with Gemini.</li>
+          <li>Click the page once before asking for sound. Browsers keep audio off until you interact with the page.</li>
+        </ol>
+        <div class="table" style="margin-bottom:12px">
+          <table>
+            <thead><tr><th scope="col">Browser tool</th><th scope="col">What it does in the editor</th></tr></thead>
+            <tbody>
+              <tr><td>sfx_describe</td><td>Categories, music styles, macros and the sound on screen</td></tr>
+              <tr><td>sfx_generate_sound</td><td>A new sound effect from a category, or <code>random</code></td></tr>
+              <tr><td>sfx_compose_music</td><td>A full track in a style, or <code>random</code></td></tr>
+              <tr><td>sfx_remix_music</td><td>New drums, bass, chords or melody; key and tempo</td></tr>
+              <tr><td>sfx_edit_sound · sfx_apply_macro · sfx_mutate</td><td>Change layers, bend the whole sound, or nudge it</td></tr>
+              <tr><td>sfx_get_sound · sfx_load_sound</td><td>Read the sound (with its JSON), or load one in</td></tr>
+              <tr><td>sfx_play · sfx_history · sfx_export</td><td>Play or stop, go back in history, download WAV or JSON</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Agents that run scripts on the page, such as browser-automation agents, can call the same tools without WebMCP through <code>window.sfxForge</code>:</p>
+        <div class="cmd"><div class="bar"><span>JavaScript · on the editor page</span><button class="btn copy" type="button">Copy</button></div>
+<pre>window.sfxForge.tools                       <span class="c">// names, descriptions, input schemas</span>
+await window.sfxForge.call('sfx_compose_music', { style: 'boss', seconds: 40 })
+await window.sfxForge.call('sfx_remix_music', { parts: ['drums'] })</pre></div>
+        <p class="note">WebMCP is in an early Chrome origin trial and the API is still changing, so treat this route as a preview. The browser tools work on the sound in front of you and return numbers rather than audio or images. For building a whole pack into your game folder, routes A–C are the dependable choice. Inside a Claude artifact the page runs in a sandboxed frame, so WebMCP is only available on this site.</p>
       </article>
     </div>
   </section>
