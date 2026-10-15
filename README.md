@@ -106,6 +106,7 @@ The editor page also registers its controls as [WebMCP](https://developer.chrome
 | `sfx_play`, `sfx_history`, `sfx_export` | Play or stop, go back in history, download WAV or JSON |
 
 - WebMCP is in a Chrome origin trial (Chrome 149+) and the API is still changing. To try it locally, enable `chrome://flags/#enable-webmcp-testing`.
+- https://sfxforge.vercel.app is registered for the WebMCP origin trial (token valid until 30 March 2027, Chrome 149 to 162), so it works there without the flag.
 - To turn it on for every visitor to a deployment, register its origin for the WebMCP trial at [Chrome Origin Trials](https://developer.chrome.com/origintrials/) and set the token as the `WEBMCP_OT_TOKEN` environment variable. `npm run build` adds the `origin-trial` meta tag.
 - The same tools are available to page scripts as `window.sfxForge.tools` and `window.sfxForge.call(name, args)`, for agents that automate the page with scripts instead.
 - Tools return text (stats as JSON), not audio or images. Inside a claude.ai artifact the page runs in a sandboxed frame, so WebMCP only works on the hosted site.
