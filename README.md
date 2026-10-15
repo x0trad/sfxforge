@@ -58,7 +58,7 @@ Add it to your MCP client (Claude Desktop, Claude Code, or any MCP host):
 }
 ```
 
-Claude Code: `claude mcp add sfx -e SFX_DIR=$PWD/assets/sfx -- node /path/sfx-forge/src/server.js`
+Claude Code: `claude mcp add --transport stdio --scope project --env SFX_DIR=$PWD/assets/sfx sfx -- node /ABSOLUTE/PATH/sfx-forge/src/server.js`
 
 | Tool | What it does |
 |---|---|
