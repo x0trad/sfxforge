@@ -207,7 +207,7 @@ asyncio.run(sfx.run("Give the dash move a whooshier sound and export the pack"))
         </div>
         <p><a href="https://developer.chrome.com/docs/ai/webmcp">WebMCP</a> is a new browser standard: a web page registers tools that agents in the browser can call directly, instead of clicking around the screen. When the editor is open in a browser that supports it, it registers 12 tools and shows a green <code>WEBMCP · 12 TOOLS</code> badge in its top bar. The agent drives the live editor, so you watch every change happen and each step lands in the history strip.</p>
         <ol class="steps">
-          <li>Use Chrome 149 or newer. Until this site joins Chrome's origin trial, turn the feature on yourself: open <code>chrome://flags/#enable-webmcp-testing</code>, set it to <strong>Enabled</strong> and relaunch.</li>
+          <li>Use Chrome 149 to 162. This site is registered for Chrome's WebMCP origin trial (until 30 March 2027), so it works with no setup. On other origins, such as a local copy, turn it on at <code>chrome://flags/#enable-webmcp-testing</code>.</li>
           <li>Open <a href="/">the editor</a> and check for the badge in the top bar.</li>
           <li>Use an agent that speaks WebMCP. Today that mostly means extensions, such as Chrome's <a href="https://github.com/beaufortfrancois/model-context-tool-inspector">Model Context Tool Inspector</a>, which lists the tools and can run them by hand or with Gemini.</li>
           <li>Click the page once before asking for sound. Browsers keep audio off until you interact with the page.</li>
@@ -231,6 +231,7 @@ asyncio.run(sfx.run("Give the dash move a whooshier sound and export the pack"))
 <pre>window.sfxForge.tools                       <span class="c">// names, descriptions, input schemas</span>
 await window.sfxForge.call('sfx_compose_music', { style: 'boss', seconds: 40 })
 await window.sfxForge.call('sfx_remix_music', { parts: ['drums'] })</pre></div>
+        <p class="note">Building your own WebMCP client? In Chrome 154 and earlier, <code>executeTool()</code> takes the tool object from <code>getTools()</code> and the arguments as a JSON string, for example <code>executeTool(tool, JSON.stringify(args))</code>. Plain objects are accepted from Chrome 155.</p>
         <p class="note">WebMCP is in an early Chrome origin trial and the API is still changing, so treat this route as a preview. The browser tools work on the sound in front of you and return numbers rather than audio or images. For building a whole pack into your game folder, routes A–C are the dependable choice. Inside a Claude artifact the page runs in a sandboxed frame, so WebMCP is only available on this site.</p>
       </article>
     </div>
