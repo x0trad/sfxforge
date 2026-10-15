@@ -1,0 +1,128 @@
+{
+  "format": "sfx-forge/1",
+  "id": "smash-hit-spark",
+  "name": "hit spark",
+  "category": "hit",
+  "seed": 11,
+  "length": 0.32,
+  "steps": 16,
+  "master": {
+    "gain": 0.9,
+    "reverb": 0,
+    "room": 0.3,
+    "delay": 0,
+    "delayTime": 0.12,
+    "feedback": 0.3,
+    "normalize": true
+  },
+  "layers": [
+    {
+      "id": "L1",
+      "name": "smack",
+      "mute": false,
+      "wave": "noise",
+      "duty": 0.5,
+      "freq": 2778.967621619813,
+      "freqEnd": 564.9732041172683,
+      "slide": 0.08,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.0005,
+        "h": 0.005,
+        "d": 0.04928414974431507,
+        "s": 0,
+        "r": 0.03
+      },
+      "filter": {
+        "type": "lp",
+        "cutoff": 6950.7881798781455,
+        "cutoffEnd": 1820.9320353344083,
+        "q": 1
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0.5152089189738035,
+      "gain": 0.8,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 1,
+          "len": 0.06
+        }
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "body",
+      "mute": false,
+      "wave": "sine",
+      "duty": 0.5,
+      "freq": 290.94380200175306,
+      "freqEnd": 58.23209751397371,
+      "slide": 0.06721819387748837,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.0005,
+        "h": 0.01,
+        "d": 0.10360297289444133,
+        "s": 0,
+        "r": 0.04
+      },
+      "filter": {
+        "type": "none",
+        "cutoff": 8000,
+        "cutoffEnd": 8000,
+        "q": 0.7
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0.7217603360302747,
+      "gain": 0.9,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 1,
+          "len": 0.12
+        }
+      ]
+    }
+  ]
+}

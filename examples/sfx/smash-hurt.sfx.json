@@ -1,0 +1,74 @@
+{
+  "format": "sfx-forge/1",
+  "id": "smash-hurt",
+  "name": "hurt",
+  "category": "hurt",
+  "seed": 8,
+  "length": 0.4,
+  "steps": 16,
+  "master": {
+    "gain": 0.9,
+    "reverb": 0,
+    "room": 0.5,
+    "delay": 0,
+    "delayTime": 0.12,
+    "feedback": 0.3,
+    "normalize": true
+  },
+  "layers": [
+    {
+      "id": "L1",
+      "name": "ouch",
+      "mute": false,
+      "wave": "square",
+      "duty": 0.5,
+      "freq": 346.88855095300823,
+      "freqEnd": 124.92598552442617,
+      "slide": 0.2543931430787779,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 26.700182021595538,
+        "depth": 1.174098502844572
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.002,
+        "h": 0.02,
+        "d": 0.18582218361552805,
+        "s": 0,
+        "r": 0.05
+      },
+      "filter": {
+        "type": "lp",
+        "cutoff": 4000,
+        "cutoffEnd": 1200,
+        "q": 1
+      },
+      "crush": {
+        "bits": 7,
+        "rate": 1
+      },
+      "drive": 0,
+      "gain": 0.7,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 1,
+          "len": 0.25
+        }
+      ]
+    }
+  ]
+}

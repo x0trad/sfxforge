@@ -1,0 +1,182 @@
+{
+  "format": "sfx-forge/1",
+  "id": "smash-heavy-punch",
+  "name": "heavy punch",
+  "category": "punch",
+  "seed": 21,
+  "length": 0.43200000000000005,
+  "steps": 16,
+  "master": {
+    "gain": 0.9,
+    "reverb": 0,
+    "room": 0.3,
+    "delay": 0,
+    "delayTime": 0.12,
+    "feedback": 0.3,
+    "normalize": true
+  },
+  "layers": [
+    {
+      "id": "L1",
+      "name": "smack",
+      "mute": false,
+      "wave": "noise",
+      "duty": 0.5,
+      "freq": 2170.1249692946135,
+      "freqEnd": 440.2214914084144,
+      "slide": 0.10800000000000001,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.0005,
+        "h": 0.006750000000000001,
+        "d": 0.07312167211412453,
+        "s": 0,
+        "r": 0.0405
+      },
+      "filter": {
+        "type": "lp",
+        "cutoff": 5911.93075850606,
+        "cutoffEnd": 1372.0508090220392,
+        "q": 1
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0.6567956352606416,
+      "gain": 0.8,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.081,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 1,
+          "note": 0,
+          "vel": 1,
+          "len": 0.081
+        }
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "body",
+      "mute": false,
+      "wave": "triangle",
+      "duty": 0.5,
+      "freq": 152.61932523492902,
+      "freqEnd": 44.80743732113898,
+      "slide": 0.16484296690206976,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.0005,
+        "h": 0.013500000000000002,
+        "d": 0.16049594511743637,
+        "s": 0,
+        "r": 0.054000000000000006
+      },
+      "filter": {
+        "type": "none",
+        "cutoff": 8000,
+        "cutoffEnd": 8000,
+        "q": 0.7
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0.47010397871490567,
+      "gain": 0.9,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.081,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 1,
+          "note": 0,
+          "vel": 1,
+          "len": 0.162
+        }
+      ]
+    },
+    {
+      "id": "L3",
+      "name": "swish",
+      "mute": false,
+      "wave": "noise",
+      "duty": 0.5,
+      "freq": 2522.689245761144,
+      "freqEnd": 5045.378491522288,
+      "slide": 0.0675,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.02,
+        "h": 0,
+        "d": 0.0405,
+        "s": 0,
+        "r": 0.013500000000000002
+      },
+      "filter": {
+        "type": "bp",
+        "cutoff": 1500,
+        "cutoffEnd": 5000,
+        "q": 1.5
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0,
+      "gain": 0.25,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.081,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 1,
+          "len": 0.054000000000000006
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "sfx-forge",
+  "version": "1.0.0",
+  "description": "Visual game-audio synth (SFX + music) with an MCP server so AI agents can design sound effects and tracks. Zero dependencies.",
+  "main": "src/server.js",
+  "bin": {
+    "sfx-mcp": "src/server.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node test/smoke.js",
+    "build": "node editor/build.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "files": [
+    "src",
+    "editor",
+    "dist",
+    "examples",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "sfx",
+    "game-audio",
+    "chiptune",
+    "synth",
+    "sound-effects"
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "format": "sfx-forge/1",
+  "id": "smash-dash",
+  "name": "dash",
+  "category": "dash",
+  "seed": 9,
+  "length": 0.4,
+  "steps": 16,
+  "master": {
+    "gain": 0.9,
+    "reverb": 0,
+    "room": 0.5,
+    "delay": 0,
+    "delayTime": 0.12,
+    "feedback": 0.3,
+    "normalize": true
+  },
+  "layers": [
+    {
+      "id": "L1",
+      "name": "air",
+      "mute": false,
+      "wave": "noise",
+      "duty": 0.5,
+      "freq": 5000,
+      "freqEnd": 5000,
+      "slide": 0,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.10958475573919713,
+        "h": 0,
+        "d": 0.13842959387227893,
+        "s": 0,
+        "r": 0.05
+      },
+      "filter": {
+        "type": "bp",
+        "cutoff": 499.36445904895663,
+        "cutoffEnd": 3638.712446766183,
+        "q": 2.5857066008029506,
+        "time": 0.15
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0,
+      "gain": 0.9,
+      "pan": 0.11331696608103814,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 1,
+          "len": 0.2
+        }
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "kick-off",
+      "mute": false,
+      "wave": "sine",
+      "duty": 0.5,
+      "freq": 180,
+      "freqEnd": 60,
+      "slide": 0.06,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.001,
+        "h": 0,
+        "d": 0.06,
+        "s": 0,
+        "r": 0.02
+      },
+      "filter": {
+        "type": "none",
+        "cutoff": 8000,
+        "cutoffEnd": 8000,
+        "q": 0.7
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0,
+      "gain": 0.5,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 1,
+          "len": 0.05
+        }
+      ]
+    }
+  ]
+}

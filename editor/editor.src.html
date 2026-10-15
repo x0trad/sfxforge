@@ -1,0 +1,855 @@
+<title>SFX Forge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Martian+Mono:wght@300;400;600&display=swap">
+<style>
+/* Layout: an instrument panel. Top transport bars, a framed score field in the middle
+   (rows = layers, columns = steps, tiles = hits), layers + library on the left, knobs on the right.
+   Deliberately single-theme dark, like the SQNCR reference. */
+:root {
+  --ground: #0F0F0E;
+  --grid: #1A1A18;
+  --line: #2B2A26;
+  --ink: #DDDACA;
+  --dim: #8A877B;
+  --faint: #55534B;
+  --hot: #E0503A;
+  --ok: #9A9D3C;
+  --f-ui: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --f-glyph: "DotGothic16", "Martian Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--ground); color: var(--ink); font-family: var(--f-ui); font-size: 11px; font-weight: 300;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+button { background: none; border: 1px solid var(--line); padding: 3px 7px; cursor: pointer; text-transform: uppercase; white-space: nowrap; }
+button:hover { border-color: var(--dim); }
+button.on, button:active { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+button[disabled] { opacity: 0.35; cursor: default; }
+.app { display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 10px; height: 100%; min-height: 560px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.grp { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lbl { color: var(--faint); }
+.brand { font-weight: 600; letter-spacing: 0.08em; }
+.brand b { font-family: var(--f-glyph); font-weight: 400; font-size: 15px; margin-right: 6px; vertical-align: -1px; }
+.spacer { flex: 1; }
+.cats { display: flex; gap: 4px; flex-wrap: wrap; }
+.cat { display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px; }
+.cat i { font-style: normal; font-family: var(--f-glyph); font-size: 13px; text-transform: none; }
+.rnd { border-color: var(--ink); padding: 4px 9px; font-weight: 400; }
+.rnd i { font-size: 15px; }
+.randgrp { display: flex; align-items: center; gap: 6px; padding-right: 14px; margin-right: 2px; border-right: 1px solid var(--line); flex-wrap: wrap; }
+.randgrp input[type=range] { width: 90px; }
+.randgrp output { width: 4ch; font-variant-numeric: tabular-nums; }
+.music .lbl.big { color: var(--ink); }
+.music .cat i { font-size: 15px; }
+.music label output { width: 5ch; font-variant-numeric: tabular-nums; }
+.hist { display: flex; gap: 4px; align-items: center; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; padding-bottom: 2px; }
+.hist .lbl { flex: none; margin-right: 4px; }
+.hist button { flex: none; display: inline-flex; gap: 5px; align-items: center; text-transform: none; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; }
+.hist button i { font-style: normal; font-family: var(--f-glyph); font-size: 12px; }
+.hist .empty { color: var(--faint); text-transform: none; }
+.main { display: grid; grid-template-columns: 210px minmax(0, 1fr) 300px; gap: 14px; min-height: 0; }
+.col { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.sec { display: flex; flex-direction: column; gap: 6px; }
+.sec > h3 { margin: 0; font-size: 10px; font-weight: 400; color: var(--faint); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.stagewrap { position: relative; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.stage { position: relative; flex: 1; min-height: 300px; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; cursor: crosshair; }
+.corner { position: absolute; width: 36px; height: 36px; border-color: var(--ink); border-style: solid; border-width: 0; pointer-events: none; }
+.corner.tl { left: 0; top: 0; border-left-width: 2px; border-top-width: 2px; }
+.corner.tr { right: 0; top: 0; border-right-width: 2px; border-top-width: 2px; }
+.corner.bl { left: 0; bottom: 0; border-left-width: 2px; border-bottom-width: 2px; }
+.corner.br { right: 0; bottom: 0; border-right-width: 2px; border-bottom-width: 2px; }
+.kanji { position: absolute; right: 18px; top: 10px; font-family: var(--f-glyph); font-size: clamp(40px, 7vw, 84px); line-height: 1; color: var(--ink); opacity: 0.09; pointer-events: none; text-transform: none; }
+.stats { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.stats b { color: var(--ink); font-weight: 400; }
+.namebox { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.namebox input { background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 2px 0; width: 22ch; max-width: 100%; text-transform: none; }
+.idtag { color: var(--faint); text-transform: none; }
+.layer { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 5px 6px; border: 1px solid transparent; cursor: pointer; }
+.layer:hover { border-color: var(--line); }
+.layer.sel { border-color: var(--ink); }
+.layer canvas { width: 18px; height: 18px; }
+.layer .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+.layer.muted .nm, .layer.muted canvas { opacity: 0.35; }
+.layer .acts { display: flex; gap: 3px; }
+.layer .acts button { padding: 1px 5px; }
+.lib { display: flex; flex-direction: column; }
+.libitem { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 6px; border-bottom: 1px solid var(--grid); cursor: pointer; }
+.libitem:hover { background: var(--grid); }
+.libitem.cur { color: var(--ink); background: var(--grid); }
+.libitem i { font-style: normal; font-family: var(--f-glyph); font-size: 14px; text-transform: none; }
+.libitem span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+.libitem small { color: var(--faint); }
+.note { color: var(--faint); text-transform: none; line-height: 1.6; font-size: 10.5px; }
+.waves { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.waves button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; }
+.waves canvas { width: 16px; height: 16px; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.prm { display: grid; grid-template-columns: 78px minmax(0, 1fr) 72px; gap: 8px; align-items: center; }
+.prm span { color: var(--dim); }
+.prm output { text-align: right; font-variant-numeric: tabular-nums; text-transform: none; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 16px; background: transparent; margin: 0; min-width: 0; }
+input[type=range]::-webkit-slider-runnable-track { height: 1px; background: var(--faint); }
+input[type=range]::-moz-range-track { height: 1px; background: var(--faint); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 7px; height: 12px; margin-top: -6px; background: var(--ink); border: 0; border-radius: 0; }
+input[type=range]::-moz-range-thumb { width: 7px; height: 12px; background: var(--ink); border: 0; border-radius: 0; }
+.macros { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 16px; }
+.macro { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: center; }
+.macro span { color: var(--dim); }
+.ask { display: flex; gap: 6px; min-width: 0; flex: 1 1 320px; }
+.ask input { flex: 1; min-width: 0; background: transparent; border: 1px solid var(--line); padding: 3px 7px; text-transform: none; }
+.status { color: var(--dim); min-height: 1.4em; text-transform: none; }
+.status.err { color: var(--hot); }
+.status.good { color: var(--ok); }
+.banner { border: 1px solid var(--hot); padding: 6px 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; text-transform: none; }
+.sheet { position: fixed; inset: 0; background: rgba(8, 8, 7, 0.82); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.sheet .box { background: var(--ground); border: 1px solid var(--ink); width: min(760px, 100%); max-height: 90%; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.sheet textarea { flex: 1; min-height: 320px; background: var(--grid); border: 1px solid var(--line); padding: 8px; text-transform: none; font-size: 11px; letter-spacing: 0; resize: vertical; }
+kbd { border: 1px solid var(--line); padding: 0 4px; font: inherit; }
+@media (max-width: 1080px) {
+  html, body { height: auto; }
+  .app { height: auto; grid-template-rows: none; }
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .stagewrap { order: -1; }
+  .stage { min-height: 0; height: max(300px, 62vw); max-height: 520px; flex: none; }
+  .col { overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <div class="bar">
+    <span class="brand"><b>響</b>SFX FORGE</span>
+    <div class="grp">
+      <button id="play" title="Play (Space)">▸ PLAY</button>
+      <button id="loop" title="Loop playback">LOOP</button>
+    </div>
+    <div class="namebox"><span class="lbl">NAME</span><input id="name" aria-label="Sound name" maxlength="60"><span class="idtag" id="idtag"></span></div>
+    <div class="spacer"></div>
+    <div class="grp">
+      <button id="save" title="Save to the shared library">SAVE</button>
+      <button id="saveas" title="Save under a new id">SAVE AS NEW</button>
+      <button id="wav">WAV</button>
+      <button id="json">JSON</button>
+    </div>
+  </div>
+
+  <div class="bar">
+    <span class="lbl">GENERATE</span>
+    <div class="randgrp">
+      <button id="rand" class="cat rnd" data-cat="random" title="Build a sound from scratch out of random layers (R)"><i>乱</i>RANDOM</button>
+      <label class="grp" for="wild"><span class="lbl">WILDNESS</span><input type="range" id="wild" min="0" max="100" step="1" value="50"><output id="wildOut">50%</output></label>
+      <button id="any" title="Roll a random category with a random seed"><i style="font-style:normal;font-family:var(--f-glyph)">骰</i> ANY CATEGORY</button>
+    </div>
+    <div class="cats" id="cats"></div>
+  </div>
+
+  <div class="bar music">
+    <span class="lbl">MUSIC</span>
+    <div class="cats" id="styles"></div>
+    <label class="grp" for="songLen"><span class="lbl">LENGTH</span><input type="range" id="songLen" min="10" max="60" step="2" value="32" style="width:110px"><output id="songLenOut">32 s</output></label>
+    <span class="note" id="styleBlurb"></span>
+  </div>
+
+  <div class="main">
+    <div class="col">
+      <div class="sec">
+        <h3>LAYERS <span class="grp"><button id="addLayer" title="Add a layer">+ ADD</button><button id="dupLayer" title="Duplicate selected layer">DUP</button></span></h3>
+        <div id="layers"></div>
+      </div>
+      <div class="sec">
+        <h3>LIBRARY <span id="libcount"></span></h3>
+        <div class="lib" id="lib"></div>
+      </div>
+    </div>
+
+    <div class="stagewrap">
+      <div class="stage" id="stage">
+        <canvas id="cv" aria-label="Score: rows are layers, columns are steps. Click a cell to add or select a hit; double-click a hit to remove it."></canvas>
+        <div class="kanji" id="bigkanji">拳</div>
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="hist" id="hist" aria-label="Recent rolls"></div>
+      <div id="bannerHost"></div>
+      <div class="sec">
+        <h3>MACROS <span class="note">drag to bend the whole sound, release to keep it</span></h3>
+        <div class="macros" id="macros"></div>
+      </div>
+      <div class="bar">
+        <div class="grp">
+          <button id="mutate" title="Mutate (M)">MUTATE</button>
+          <span class="lbl">AMOUNT</span><input type="range" id="mutAmt" min="0.05" max="1" step="0.05" value="0.25" style="width:90px" aria-label="Mutation amount">
+          <button id="reroll" title="New seed, same category (G)">NEW SEED</button>
+        </div>
+        <div class="ask" id="askBox">
+          <input id="askText" placeholder="Describe a sound for Claude… e.g. heavy robot punch with a metal ring" aria-label="Describe a sound for Claude">
+          <button id="askBtn">ASK CLAUDE</button>
+        </div>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="col" id="params"></div>
+  </div>
+
+  <div class="note"><kbd>Space</kbd> play · <kbd>R</kbd> random · <kbd>G</kbd> new seed · <kbd>M</kbd> mutate · <kbd>[</kbd> <kbd>]</kbd> step through history · click a cell to place a hit, double-click to remove · sounds use the sfx-forge/1 format shared with sfx-mcp</div>
+</div>
+
+<script id="engineSrc">
+/*__ENGINE__*/
+</script>
+<script>
+(function () {
+  'use strict';
+  const S = window.SFX;
+  const PALETTE = ['#6FA3AD', '#9A9D3C', '#E0503A', '#B2A68A', '#EDEAD9', '#93716A', '#4E6E7A', '#D98A3A', '#7C8C5A', '#C9C3B0'];
+  const GROUND = '#0F0F0E', INK = '#DDDACA', FAINT = '#55534B', GRIDC = '#232320';
+  const KANJI = { music: '曲', random: '乱', coin: '金', pickup: '拾', jump: '跳', laser: '光', shoot: '撃', explosion: '爆', hit: '打', punch: '拳', kick: '蹴', block: '防', hurt: '痛',
+    whoosh: '風', dash: '走', powerup: '昇', blip: '点', select: '選', confirm: '決', cancel: '戻', magic: '魔', ko: '終', victory: '勝', gameover: '敗', custom: '作' };
+  const $ = (id) => document.getElementById(id);
+  const kanjiOf = (o) => (o && o.category === 'music' && S.MUSIC_STYLES[o.style]) ? S.MUSIC_STYLES[o.style].kanji : (KANJI[o && o.category] || KANJI.custom);
+  const isLong = (o) => o.length > 3 || o.steps > 128;
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const getP = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
+  const setP = (o, p, v) => { const ks = p.split('.'); let a = o; for (let i = 0; i < ks.length - 1; i++) { if (a[ks[i]] == null) a[ks[i]] = {}; a = a[ks[i]]; } a[ks[ks.length - 1]] = v; };
+  const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9_\-.]+/g, '-').replace(/^[-.]+|-+$/g, '').slice(0, 56) || 'sound';
+
+  // ---------- state ----------
+  let snd, sel = 0, selHit = -1, dirty = false, res = null, ana = null;
+  let lib = [], lastRev = null, myRev = null;
+  let db = null, col = null, dl = null, sample = null;
+
+  function status(msg, kind) { const el = $('status'); el.textContent = msg || ''; el.className = 'status' + (kind ? ' ' + kind : ''); }
+  function setDirty(v) { dirty = v; $('save').textContent = dirty ? 'SAVE •' : 'SAVE'; }
+
+  // ---------- render ----------
+  let rTimer = null;
+  function changed(opts) {
+    setDirty(true);
+    if (opts && opts.panel) buildParams();
+    if (opts && opts.layers) buildLayers();
+    clearTimeout(rTimer); rTimer = setTimeout(doRender, snd && isLong(snd) ? 260 : 35);
+  }
+  // Long sounds (music) render in a background worker so the page stays responsive.
+  let worker = null, jobId = 0, pendingJob = 0, wantPlay = false, again = false;
+  try {
+    const wsrc = $('engineSrc').textContent + '\nself.onmessage = function (e) { var r = SFX.render(e.data.snd); var l = r.left.slice(), rr = r.right.slice(); self.postMessage({ id: e.data.id, left: l, right: rr, duration: r.duration, sampleRate: r.sampleRate }, [l.buffer, rr.buffer]); };';
+    worker = new Worker(URL.createObjectURL(new Blob([wsrc], { type: 'text/javascript' })));
+    worker.onmessage = (e) => {
+      if (e.data.id !== pendingJob) return;
+      pendingJob = 0;
+      if (again) { again = false; doRender(); return; }
+      finishRender({ left: e.data.left, right: e.data.right, duration: e.data.duration, sampleRate: e.data.sampleRate, sound: snd });
+      if (wantPlay) { wantPlay = false; play(); }
+    };
+    worker.onerror = () => { worker = null; if (pendingJob) { pendingJob = 0; doRender(); } };
+  } catch (e) { worker = null; }
+  function doRender() {
+    snd = S.normalize(snd);
+    if (sel >= snd.layers.length) sel = snd.layers.length - 1;
+    if (worker && isLong(snd)) {
+      if (pendingJob) { again = true; return; }
+      pendingJob = ++jobId; worker.postMessage({ id: pendingJob, snd });
+      $('stats').innerHTML = '<span>RENDERING <b>' + Math.round(snd.length) + ' s</b>…</span>';
+      $('bigkanji').textContent = kanjiOf(snd);
+      paintStatic(); frame(); return;
+    }
+    pendingJob = 0;
+    finishRender(S.render(snd));
+  }
+  function finishRender(r) {
+    res = r; ana = S.analyze(res, 48);
+    const dur = ana.duration >= 2 ? ana.duration.toFixed(1) + ' s' : Math.round(ana.duration * 1000) + ' ms';
+    const tempo = snd.category === 'music' ? `<span>TEMPO <b>${Math.round(snd.steps / 4 / snd.length * 60)} BPM</b></span><span>BARS <b>${Math.round(snd.steps / 16)}</b></span><span>STYLE <b>${(S.MUSIC_STYLES[snd.style] || {}).label || '—'}</b></span>` : `<span>ATTACK <b>${ana.attackMs} ms</b></span><span>TONE <b>${ana.character}</b></span>`;
+    $('stats').innerHTML = `<span>DUR <b>${dur}</b></span><span>PEAK <b>${ana.peakDb} dB</b></span><span>RMS <b>${ana.rmsDb} dB</b></span>${tempo}<span>LAYERS <b>${snd.layers.length}</b></span><span>SEED <b>${snd.seed}</b></span>`;
+    $('bigkanji').textContent = kanjiOf(snd);
+    paintStatic(); frame();
+  }
+  function loadSound(s, opts) {
+    stop();
+    const c = clone(s); delete c.rev; delete c.updatedAt; delete c.by;
+    snd = S.normalize(c); sel = 0; selHit = -1; res = null; again = false;
+    $('name').value = snd.name; $('idtag').textContent = snd.id;
+    setDirty(!(opts && opts.clean));
+    buildLayers(); buildParams(); renderLib(); highlightCat(); doRender();
+  }
+
+  // ---------- glyphs ----------
+  function glyph(g, wave, cx, cy, s, col, a) {
+    s = Math.max(3, Math.round(s)); const x = Math.round(cx - s / 2), y = Math.round(cy - s / 2), u = Math.max(1, Math.round(s / 8));
+    g.save(); g.globalAlpha = a == null ? 1 : a; g.fillStyle = col; g.strokeStyle = col; g.lineWidth = u;
+    switch (wave) {
+      case 'square': g.fillRect(x, y, s, s); g.fillStyle = GROUND; g.fillRect(x + Math.round(s * 0.36), y, Math.round(s * 0.28), Math.round(s * 0.2)); break;
+      case 'sine': g.fillRect(x, y, s, s); g.fillStyle = GROUND; g.beginPath(); g.arc(x + s / 2, y + s / 2, s * 0.32, 0, 7); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(x + s / 2, y + s / 2, s * 0.13, 0, 7); g.fill(); break;
+      case 'saw': g.strokeRect(x + u / 2, y + u / 2, s - u, s - u); g.beginPath(); g.rect(x, y, s, s); g.clip(); g.beginPath();
+        for (let k = -s; k < s; k += Math.max(3, s / 3.5)) { g.moveTo(x + k, y + s); g.lineTo(x + k + s, y); } g.stroke(); break;
+      case 'triangle': g.fillRect(x, y, s, s); g.fillStyle = GROUND; g.beginPath(); g.moveTo(x + s * 0.22, y + s * 0.78); g.lineTo(x + s * 0.5, y + s * 0.24); g.lineTo(x + s * 0.78, y + s * 0.78); g.closePath(); g.fill(); break;
+      case 'noise': { const n = s >= 12 ? 4 : 3, d = s / n, r = Math.max(1, Math.round(d * 0.42));
+        for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) g.fillRect(Math.round(x + i * d + (d - r) / 2), Math.round(y + j * d + (d - r) / 2), r, r); break; }
+      case 'pulse': { const w = Math.max(1, Math.round(s / 6)); for (let i = 0; i < 3; i++) g.fillRect(x + Math.round(i * s / 2.6), y, w, s); g.fillRect(x, y + s - u, s, u); break; }
+      case 'fm': g.strokeRect(x + u / 2, y + u / 2, s - u, s - u); g.beginPath(); g.moveTo(x + s * 0.22, y + s * 0.22); g.lineTo(x + s * 0.78, y + s * 0.78); g.moveTo(x + s * 0.78, y + s * 0.22); g.lineTo(x + s * 0.22, y + s * 0.78); g.stroke(); break;
+      case 'metal': { const h = Math.round(s * 0.42), gap = s - 2 * h; g.fillRect(x, y, h, h); g.fillRect(x + h + gap, y, h, h); g.fillRect(x, y + h + gap, h, h); g.fillRect(x + h + gap, y + h + gap, h, h); break; }
+    }
+    g.restore();
+  }
+  function glyphCanvas(cv, wave, col) {
+    const dpr = window.devicePixelRatio || 1, px = cv.clientWidth || 16; cv.width = px * dpr; cv.height = px * dpr;
+    const g = cv.getContext('2d'); g.scale(dpr, dpr); glyph(g, wave, px / 2, px / 2, px - 2, col, 1);
+  }
+
+  // ---------- stage ----------
+  const cv = $('cv'), g = cv.getContext('2d');
+  const off = document.createElement('canvas'), og = off.getContext('2d');
+  let G = null; // geometry
+  function geom() {
+    const W = cv.clientWidth, H = cv.clientHeight, pad = 26;
+    const waveH = Math.max(48, Math.round(H * 0.26));
+    const scoreTop = pad + 4, scoreH = H - waveH - pad * 2 - 18;
+    const rows = Math.max(5, snd.layers.length);
+    const rowH = Math.min(72, scoreH / rows);
+    const total = Math.max(snd.length, res ? res.duration : snd.length);
+    const innerW = W - pad * 2, pxPerSec = innerW / total;
+    const gridW = snd.length * pxPerSec, colW = gridW / snd.steps;
+    const tile = Math.max(snd.steps > 64 ? 3 : 5, Math.min(colW * 0.74, rowH * 0.74));
+    return { W, H, pad, waveH, scoreTop, rowH, total, pxPerSec, gridW, colW, tile, waveTop: H - pad - waveH };
+  }
+  const tx = (t) => G.pad + t * G.pxPerSec;
+  const ry = (i) => G.scoreTop + (i + 0.5) * G.rowH;
+  function voices() {
+    const stepDur = snd.length / snd.steps, out = [];
+    snd.layers.forEach((l, li) => l.hits.forEach((h, hi) => {
+      const sw = snd.swing && (Math.round(h.t) % 2 === 1) ? snd.swing * stepDur : 0;
+      for (let r = 0; r <= (l.repeat.count | 0); r++) out.push({ li, hi, r, t: h.t * stepDur + sw + r * Math.max(0.005, l.repeat.interval), a: Math.pow(Math.min(1.5, l.repeat.decay), r) });
+    }));
+    return out;
+  }
+  function paintStatic() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return;
+    for (const c of [cv, off]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    G = geom(); og.setTransform(dpr, 0, 0, dpr, 0, 0); og.clearRect(0, 0, W, H);
+    // step dots + bar ticks
+    for (let i = 0; i < Math.max(5, snd.layers.length); i++) {
+      const y = ry(i), active = i < snd.layers.length;
+      if (i === sel) { og.fillStyle = '#1F1F1C'; og.fillRect(G.pad - 8, y - G.rowH / 2 + 1, G.gridW + 16, G.rowH - 2); }
+      for (let c = 0; c < snd.steps; c += (snd.steps > 128 ? 4 : 1)) { og.fillStyle = active ? (c % 4 === 0 ? '#4A4840' : '#33322D') : GRIDC; og.fillRect(Math.round(G.pad + (c + 0.5) * G.colW) - 1, Math.round(y) - 1, 2, 2); }
+    }
+    og.font = '400 9px "Martian Mono", monospace'; og.fillStyle = FAINT; og.textBaseline = 'top';
+    if (snd.steps > 64) {
+      const barW = G.colW * 16, every = barW < 22 ? 4 : barW < 40 ? 2 : 1;
+      for (let b = 0; b * 16 < snd.steps; b += every) og.fillText(String(b + 1).padStart(2, '0'), Math.round(G.pad + b * barW), 8);
+      if (Array.isArray(snd.sections)) {
+        const rowsH = G.rowH * Math.max(5, snd.layers.length);
+        snd.sections.forEach((name, i) => {
+          const x = Math.round(G.pad + i * 4 * barW);
+          og.fillStyle = '#3A3934'; og.fillRect(x, G.scoreTop - 2, 1, rowsH + 4);
+          og.fillStyle = '#8A877B'; og.fillText(String(name).toUpperCase(), x + 4, 19);
+          og.fillStyle = FAINT;
+        });
+      }
+    } else for (let c = 0; c < snd.steps; c += 4) og.fillText(String(c).padStart(2, '0'), Math.round(G.pad + c * G.colW), 8);
+    og.fillText(snd.steps + ' STEPS · ' + Math.round(snd.length * 1000) + ' MS GRID', G.pad, Math.round(G.scoreTop + G.rowH * Math.max(5, snd.layers.length) + 4));
+    // end-of-grid marker
+    og.fillStyle = '#3A3934'; og.fillRect(Math.round(G.pad + G.gridW), G.scoreTop, 1, G.rowH * Math.max(5, snd.layers.length));
+    // tiles
+    const vs = voices();
+    for (const v of vs) {
+      const l = snd.layers[v.li], col = PALETTE[v.li % PALETTE.length];
+      const h = l.hits[v.hi];
+      const x = tx(v.t) + G.colW / 2, y = ry(v.li) - Math.max(-0.35, Math.min(0.35, h.note / 48)) * G.rowH;
+      const size = v.r ? G.tile * 0.55 : G.tile * (0.75 + 0.25 * Math.min(1, h.vel));
+      glyph(og, l.wave, x, y, size, col, (l.mute ? 0.25 : 1) * (v.r ? Math.max(0.2, v.a) * 0.8 : 1));
+      if (!v.r && v.li === sel && v.hi === selHit) { og.strokeStyle = INK; og.lineWidth = 1; og.strokeRect(Math.round(x - G.tile / 2 - 3) + 0.5, Math.round(y - G.tile / 2 - 3) + 0.5, Math.round(G.tile + 6), Math.round(G.tile + 6)); }
+      if (!v.r && h.note && snd.steps <= 64) { og.fillStyle = INK; og.font = '400 8px "Martian Mono", monospace'; og.fillText((h.note > 0 ? '+' : '') + h.note, Math.round(x + G.tile / 2 + 2), Math.round(y - G.tile / 2)); }
+    }
+    // waveform
+    if (res) {
+      const top = G.waveTop, mid = top + G.waveH / 2, amp = G.waveH / 2 - 2, L = res.left, R = res.right, N = L.length;
+      const w = Math.round(res.duration * G.pxPerSec);
+      og.fillStyle = '#2A2925'; og.fillRect(G.pad, Math.round(mid), Math.round(G.W - G.pad * 2), 1);
+      og.fillStyle = INK; og.globalAlpha = 0.85;
+      for (let x = 0; x < w; x++) {
+        const a = Math.floor(x / w * N), b = Math.max(a + 1, Math.floor((x + 1) / w * N)); let mn = 0, mx = 0;
+        for (let i = a; i < b && i < N; i++) { const v = (L[i] + R[i]) / 2; if (v < mn) mn = v; if (v > mx) mx = v; }
+        const y0 = Math.round(mid - mx * amp), y1 = Math.round(mid - mn * amp); og.fillRect(G.pad + x, y0, 1, Math.max(1, y1 - y0));
+      }
+      og.globalAlpha = 1; og.fillStyle = FAINT; og.font = '400 9px "Martian Mono", monospace';
+      og.fillText(Math.round(res.duration * 1000) + ' MS', Math.min(G.W - G.pad - 46, G.pad + w + 6), top);
+    }
+  }
+
+  // ---------- playback + particles ----------
+  let ac = null, src = null, playing = false, looping = false, t0 = 0, events = [], fired = 0, parts = [], raf = 0;
+  function play() {
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { status('Audio is unavailable in this view.', 'err'); return; }
+    ac.resume();
+    if (pendingJob || !res) { wantPlay = true; return; }
+    stop(true);
+    const b = ac.createBuffer(2, res.left.length, res.sampleRate);
+    b.copyToChannel(res.left, 0); b.copyToChannel(res.right, 1);
+    const s = ac.createBufferSource(); s.buffer = b; s.connect(ac.destination);
+    s.onended = () => { if (src !== s) return; if (looping) play(); else { playing = false; $('play').classList.remove('on'); } };
+    s.start(); src = s; t0 = ac.currentTime; playing = true; $('play').classList.add('on');
+    events = voices().filter(v => !snd.layers[v.li].mute).sort((a, b) => a.t - b.t); fired = 0;
+    loopFrames();
+  }
+  function stop(keepBtn) { if (src) { const s = src; src = null; try { s.stop(); } catch (e) {} } playing = false; if (!keepBtn) { wantPlay = false; $('play').classList.remove('on'); } }
+  function burst(v) {
+    const l = snd.layers[v.li], col = PALETTE[v.li % PALETTE.length], x = tx(v.t) + G.colW / 2, y = ry(v.li);
+    const n = v.r ? 2 : 5 + Math.round(4 * Math.min(1, l.hits[v.hi].vel));
+    if (parts.length > 500) return;
+    for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.3) * 90, vy: (Math.random() - 0.5) * 120, s: 2 + Math.random() * (v.r ? 3 : 7), c: col, life: 0.5 + Math.random() * 0.5, age: 0 });
+    parts.push({ ring: true, x, y, s: G.tile, c: col, life: 0.35, age: 0, wave: l.wave });
+  }
+  let lastT = 0;
+  function loopFrames() { if (!raf) { lastT = performance.now(); raf = requestAnimationFrame(tick); } }
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function tick(now) {
+    raf = 0; const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+    if (playing && ac) { const t = ac.currentTime - t0; while (fired < events.length && events[fired].t <= t) { if (!reduced) burst(events[fired]); fired++; } }
+    parts.forEach(p => { p.age += dt; if (!p.ring) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 40 * dt; } });
+    parts = parts.filter(p => p.age < p.life);
+    frame();
+    if (playing || parts.length) raf = requestAnimationFrame(tick);
+  }
+  function frame() {
+    if (!G) return; const dpr = window.devicePixelRatio || 1;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(off, 0, 0);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (const p of parts) {
+      const k = 1 - p.age / p.life;
+      if (p.ring) { g.strokeStyle = p.c; g.globalAlpha = k; g.lineWidth = 1; const s = p.s * (1 + (1 - k) * 0.9); g.strokeRect(Math.round(p.x - s / 2) + 0.5, Math.round(p.y - s / 2) + 0.5, Math.round(s), Math.round(s)); }
+      else { g.fillStyle = p.c; g.globalAlpha = k; const s = Math.round(p.s * (0.6 + 0.4 * k)); g.fillRect(Math.round(p.x - s / 2), Math.round(p.y - s / 2), s, s); }
+    }
+    g.globalAlpha = 1;
+    if (playing && ac) {
+      const x = Math.round(tx(ac.currentTime - t0)) + 0.5;
+      g.fillStyle = INK; g.fillRect(x - 0.5, G.scoreTop - 6, 1, G.H - G.scoreTop - G.pad + 6);
+    }
+  }
+  new ResizeObserver(() => { if (snd) { paintStatic(); frame(); } }).observe($('stage'));
+
+  // ---------- stage interaction ----------
+  function hitAt(ev) {
+    const r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+    if (!G || y < G.scoreTop || y > G.scoreTop + G.rowH * Math.max(5, snd.layers.length)) return null;
+    const row = Math.floor((y - G.scoreTop) / G.rowH), c = Math.floor((x - G.pad) / G.colW);
+    if (c < 0 || c >= snd.steps) return null;
+    return { row, c };
+  }
+  cv.addEventListener('click', (ev) => {
+    const h = hitAt(ev); if (!h) return;
+    if (h.row >= snd.layers.length) { addLayer(); return; }
+    if (h.row !== sel) { sel = h.row; selHit = -1; buildLayers(); }
+    const l = snd.layers[sel], i = l.hits.findIndex(x => x.t === h.c);
+    if (i >= 0) selHit = i;
+    else { const last = l.hits[l.hits.length - 1]; l.hits.push({ t: h.c, note: last ? last.note : 0, vel: 1, len: last ? last.len : 0.12 }); l.hits.sort((a, b) => a.t - b.t); selHit = l.hits.findIndex(x => x.t === h.c); setDirty(true); }
+    buildParams(); doRender();
+    if (!playing) previewHit();
+  });
+  cv.addEventListener('dblclick', (ev) => {
+    const h = hitAt(ev); if (!h || h.row >= snd.layers.length) return;
+    const l = snd.layers[h.row], i = l.hits.findIndex(x => x.t === h.c);
+    if (i >= 0) { l.hits.splice(i, 1); selHit = -1; changed({ panel: true }); }
+  });
+  function previewHit() { /* audition the selected layer alone */
+    if (!snd || !snd.layers[sel]) return;
+    const solo = clone(snd); solo.layers = [clone(snd.layers[sel])]; const h = solo.layers[0].hits[selHit];
+    if (!h) return; solo.layers[0].hits = [Object.assign({}, h, { t: 0 })];
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    const r = S.render(solo); const b = ac.createBuffer(2, r.left.length, r.sampleRate); b.copyToChannel(r.left, 0); b.copyToChannel(r.right, 1);
+    const s = ac.createBufferSource(); s.buffer = b; const gn = ac.createGain(); gn.gain.value = 0.7; s.connect(gn).connect(ac.destination); ac.resume(); s.start();
+  }
+
+  // ---------- categories ----------
+  function buildCats() {
+    const host = $('cats'); host.innerHTML = '';
+    for (const c of S.CATEGORIES) {
+      if (c === 'random') continue;
+      const b = document.createElement('button'); b.className = 'cat'; b.dataset.cat = c; b.title = 'Generate a new ' + c + ' sound';
+      b.innerHTML = `<i>${KANJI[c]}</i>${c}`; b.onclick = () => generate(c); host.appendChild(b);
+    }
+  }
+  function highlightCat() { document.querySelectorAll('.cat').forEach(b => b.classList.toggle('on', b.dataset.style ? (snd.category === 'music' && b.dataset.style === snd.style) : b.dataset.cat === snd.category)); }
+  function wildness() { return +$('wild').value / 100; }
+  function makeSound(cat, seed) {
+    const s = S.gen(cat, seed, { wildness: wildness() });
+    if (cat === 'random') s.id = slug(s.name) + '-' + seed.toString(36);
+    else { s.id = cat + '-' + seed.toString(36); s.name = cat + ' ' + seed.toString(36); }
+    return s;
+  }
+  function generate(cat, seed) {
+    seed = seed == null ? (Math.random() * 1e9) >>> 0 : seed;
+    keepCurrent();
+    loadSound(makeSound(cat, seed)); remember(); play();
+  }
+  $('rand').onclick = () => generate('random');
+  function compose(style, seed) {
+    seed = seed == null ? (Math.random() * 1e9) >>> 0 : seed;
+    keepCurrent();
+    const s = S.gen('music', seed, { style, seconds: +$('songLen').value });
+    s.id = style + '-' + seed.toString(36);
+    loadSound(s); remember(); play();
+    status(S.MUSIC_STYLES[style].label + ' · ' + s.bpm + ' BPM · ' + s.bars + ' bars. Space stops, LOOP repeats it, G writes another.', 'good');
+  }
+  (function buildStyles() {
+    const host = $('styles');
+    for (const [id, st] of Object.entries(S.MUSIC_STYLES)) {
+      const b = document.createElement('button'); b.className = 'cat'; b.dataset.style = id; b.title = st.blurb;
+      b.innerHTML = `<i>${st.kanji}</i>${st.label}`; b.onclick = () => compose(id);
+      b.onmouseenter = b.onfocus = () => { $('styleBlurb').textContent = st.blurb; };
+      host.appendChild(b);
+    }
+  })();
+  try { const v = localStorage.getItem('sfxforge.songLen'); if (v != null) $('songLen').value = v; } catch (e) {}
+  $('songLenOut').textContent = $('songLen').value + ' s';
+  $('songLen').addEventListener('input', () => { $('songLenOut').textContent = $('songLen').value + ' s'; try { localStorage.setItem('sfxforge.songLen', $('songLen').value); } catch (e) {} });
+  $('any').onclick = () => { const cs = S.CATEGORIES.filter(c => c !== 'random'); generate(cs[Math.floor(Math.random() * cs.length)]); };
+  try { const w = localStorage.getItem('sfxforge.wild'); if (w != null) $('wild').value = w; } catch (e) {}
+  $('wildOut').textContent = $('wild').value + '%';
+  $('wild').addEventListener('input', () => { $('wildOut').textContent = $('wild').value + '%'; try { localStorage.setItem('sfxforge.wild', $('wild').value); } catch (e) {} });
+  $('wild').addEventListener('change', () => { if (snd.category === 'random') generate('random'); });
+
+  // ---------- history ----------
+  // Every roll lands here, so a good sound is never lost to the next click. Edited sounds are kept too.
+  let hist = [], histPos = -1;
+  const sig = (o) => JSON.stringify(o.layers) + JSON.stringify(o.master) + o.length + o.steps;
+  function remember(label) {
+    const c = clone(S.normalize(snd));
+    if (hist[0] && sig(hist[0].snd) === sig(c)) { histPos = 0; renderHist(); return; }
+    hist.unshift({ snd: c, label: label || c.name }); hist = hist.slice(0, 30); histPos = 0; renderHist();
+  }
+  function keepCurrent() {
+    if (!snd || !dirty) return;
+    const c = clone(S.normalize(snd)), at = hist[histPos];
+    if (at && sig(at.snd) === sig(c)) return;
+    hist.unshift({ snd: c, label: c.name + ' (edited)' }); hist = hist.slice(0, 30); histPos = 0;
+  }
+  function goHist(i) {
+    if (i < 0 || i >= hist.length || i === histPos) return;
+    const target = hist[i];
+    keepCurrent(); // may add the current edit at the front, which shifts indices
+    histPos = hist.indexOf(target); loadSound(target.snd); renderHist(); play();
+  }
+  function renderHist() {
+    const host = $('hist'); host.innerHTML = '<span class="lbl">HISTORY</span>';
+    if (!hist.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Your rolls will collect here.'; host.appendChild(e); return; }
+    hist.forEach((h, i) => {
+      const b = document.createElement('button'); if (i === histPos) b.classList.add('on');
+      b.title = h.label; b.innerHTML = `<i>${kanjiOf(h.snd)}</i>${escapeHtml(h.label)}`;
+      b.onclick = () => goHist(i); host.appendChild(b);
+    });
+    const on = host.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  // ---------- layers ----------
+  function buildLayers() {
+    const host = $('layers'); host.innerHTML = '';
+    snd.layers.forEach((l, i) => {
+      const row = document.createElement('div'); row.className = 'layer' + (i === sel ? ' sel' : '') + (l.mute ? ' muted' : '');
+      row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-label', 'Select layer ' + l.name);
+      row.innerHTML = `<canvas></canvas><span class="nm">${escapeHtml(l.name)}</span><span class="acts"><button data-a="mute" title="Mute">${l.mute ? 'UN' : 'M'}</button>${snd.layers.length > 1 ? '<button data-a="del" title="Remove layer">×</button>' : ''}</span>`;
+      row.onclick = (e) => {
+        const a = e.target.dataset && e.target.dataset.a;
+        if (a === 'mute') { l.mute = !l.mute; changed({ layers: true }); return; }
+        if (a === 'del') { snd.layers.splice(i, 1); sel = Math.max(0, Math.min(sel, snd.layers.length - 1)); selHit = -1; changed({ layers: true, panel: true }); return; }
+        sel = i; selHit = -1; buildLayers(); buildParams(); paintStatic(); frame();
+      };
+      row.onkeydown = (e) => { if (e.key === 'Enter') row.click(); };
+      host.appendChild(row);
+      requestAnimationFrame(() => glyphCanvas(row.querySelector('canvas'), l.wave, PALETTE[i % PALETTE.length]));
+    });
+  }
+  function addLayer() {
+    if (snd.layers.length >= 16) { status('16 layers is the limit.', 'err'); return; }
+    const l = S.defaultLayer(snd.layers.length); l.wave = S.WAVES[snd.layers.length % S.WAVES.length]; l.name = l.wave;
+    l.id = 'L' + Date.now().toString(36).slice(-4); snd.layers.push(l); sel = snd.layers.length - 1; selHit = 0; changed({ layers: true, panel: true });
+  }
+  $('addLayer').onclick = addLayer;
+  $('dupLayer').onclick = () => { if (snd.layers.length >= 16) return; const l = clone(snd.layers[sel]); l.id = 'L' + Date.now().toString(36).slice(-4); l.name += ' copy'; snd.layers.splice(sel + 1, 0, l); sel++; changed({ layers: true, panel: true }); };
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  // ---------- params ----------
+  const fmt = {
+    hz: (v) => v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 1 : 2) + ' kHz' : Math.round(v) + ' Hz',
+    s: (v) => v < 1 ? (v < 0.01 ? (v * 1000).toFixed(1) : Math.round(v * 1000)) + ' ms' : v.toFixed(2) + ' s',
+    st: (v) => (v > 0 ? '+' : '') + (Math.round(v * 10) / 10) + ' st',
+    x: (v) => '×' + v.toFixed(2),
+    int: (v) => String(Math.round(v)),
+    pct: (v) => Math.round(v * 100) + '%',
+    num: (v) => v.toFixed(2),
+  };
+  // [path, label, min, max, scale, unit, showIf]
+  const OSC = [['freq', 'FREQ', 20, 12000, 'log', 'hz'], ['freqEnd', 'SWEEP TO', 20, 12000, 'log', 'hz'], ['slide', 'SWEEP TIME', 0, 2, 'sq', 's'], ['curve', 'CURVE', 0.1, 4, 'log', 'num'],
+    ['duty', 'DUTY', 0.02, 0.98, 'lin', 'pct', (l) => l.wave === 'pulse'], ['fm.ratio', 'FM RATIO', 0.25, 12, 'log', 'x', (l) => l.wave === 'fm'], ['fm.index', 'FM DEPTH', 0, 12, 'lin', 'num', (l) => l.wave === 'fm'],
+    ['jump.at', 'JUMP AT', 0.005, 1, 'log', 's', (l) => !!l.jump], ['jump.ratio', 'JUMP BY', 0.25, 4, 'log', 'x', (l) => !!l.jump]];
+  const GROUPS = [
+    ['ENVELOPE', [['amp.a', 'ATTACK', 0.0005, 0.5, 'log', 's'], ['amp.h', 'HOLD', 0, 1, 'sq', 's'], ['amp.d', 'DECAY', 0.005, 3, 'log', 's'], ['amp.s', 'SUSTAIN', 0, 1, 'lin', 'pct'], ['amp.r', 'RELEASE', 0.001, 2, 'log', 's']]],
+    ['FILTER', [['filter.cutoff', 'CUTOFF', 40, 18000, 'log', 'hz', (l) => l.filter.type !== 'none'], ['filter.cutoffEnd', 'SWEEP TO', 40, 18000, 'log', 'hz', (l) => l.filter.type !== 'none'], ['filter.q', 'RESONANCE', 0.1, 20, 'log', 'num', (l) => l.filter.type !== 'none']]],
+    ['VIBRATO', [['vib.rate', 'RATE', 0, 60, 'sq', 'num'], ['vib.depth', 'DEPTH', 0, 12, 'sq', 'st']]],
+    ['TEXTURE', [['drive', 'DRIVE', 0, 1, 'lin', 'pct'], ['crush.bits', 'BITS', 1, 16, 'int', 'int'], ['crush.rate', 'DOWNSAMPLE', 1, 16, 'int', 'x'], ['gain', 'GAIN', 0, 1.5, 'lin', 'pct'], ['pan', 'PAN', -1, 1, 'lin', 'num']]],
+    ['REPEAT', [['repeat.count', 'COUNT', 0, 16, 'int', 'int'], ['repeat.interval', 'INTERVAL', 0.005, 0.5, 'log', 's'], ['repeat.decay', 'DECAY', 0, 1.2, 'lin', 'pct'], ['repeat.pitch', 'PITCH STEP', -12, 12, 'int', 'st']]],
+  ];
+  const HIT = [['note', 'NOTE', -24, 24, 'int', 'st'], ['vel', 'VELOCITY', 0, 2, 'lin', 'pct'], ['len', 'GATE', 0.005, 2, 'log', 's']];
+  const MASTER = [['length', 'GRID LENGTH', 0.05, 60, 'log', 's'], ['steps', 'STEPS', 4, 1024, 'int', 'int'], ['swing', 'SWING', 0, 0.5, 'lin', 'pct'], ['master.gain', 'DRIVE IN', 0.1, 2, 'log', 'pct'], ['master.reverb', 'REVERB', 0, 1, 'lin', 'pct'],
+    ['master.room', 'ROOM', 0, 1, 'lin', 'pct'], ['master.delay', 'ECHO', 0, 1, 'lin', 'pct'], ['master.delayTime', 'ECHO TIME', 0.01, 1, 'log', 's'], ['master.feedback', 'FEEDBACK', 0, 0.95, 'lin', 'pct']];
+
+  const toPos = (v, mn, mx, sc) => sc === 'log' ? Math.log(Math.max(v, mn) / mn) / Math.log(mx / mn) : sc === 'sq' ? Math.sqrt((v - mn) / (mx - mn)) : (v - mn) / (mx - mn);
+  const fromPos = (p, mn, mx, sc) => sc === 'log' ? mn * Math.pow(mx / mn, p) : sc === 'sq' ? mn + (mx - mn) * p * p : sc === 'int' ? Math.round(mn + (mx - mn) * p) : mn + (mx - mn) * p;
+  function slider(host, target, spec, idp, onSet) {
+    const [path, label, mn, mx, sc, unit] = spec;
+    const row = document.createElement('label'); row.className = 'prm';
+    const id = idp + path.replace(/\./g, '-');
+    const v0 = getP(target(), path);
+    const steps = sc === 'int' ? (mx - mn) : 1000;
+    row.innerHTML = `<span>${label}</span><input type="range" id="${id}" min="0" max="${steps}" step="1"><output></output>`;
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.value = Math.round(Math.max(0, Math.min(1, toPos(v0, mn, mx, sc))) * steps);
+    out.textContent = fmt[unit](v0);
+    inp.addEventListener('input', () => {
+      let v = fromPos(inp.value / steps, mn, mx, sc); if (sc === 'int') v = Math.round(v); else v = +v.toPrecision(4);
+      setP(target(), path, v); out.textContent = fmt[unit](v); onSet ? onSet(path, v) : changed();
+    });
+    host.appendChild(row);
+  }
+  function section(host, title, extra) {
+    const s = document.createElement('div'); s.className = 'sec';
+    const h = document.createElement('h3'); h.textContent = title; if (extra) h.appendChild(extra); s.appendChild(h); host.appendChild(s); return s;
+  }
+  function chips(opts, cur, onPick) {
+    const d = document.createElement('div'); d.className = 'chips';
+    for (const [v, lab] of opts) { const b = document.createElement('button'); b.textContent = lab; if (v === cur) b.classList.add('on'); b.onclick = () => onPick(v); d.appendChild(b); }
+    return d;
+  }
+  function buildParams() {
+    const host = $('params'); const keep = host.scrollTop; host.innerHTML = '';
+    const l = snd.layers[sel]; if (!l) return;
+    const L = () => snd.layers[sel];
+    // layer header
+    const nameIn = document.createElement('input'); nameIn.id = 'layerName'; nameIn.value = l.name; nameIn.maxLength = 30; nameIn.setAttribute('aria-label', 'Layer name');
+    nameIn.style.cssText = 'background:transparent;border:0;border-bottom:1px solid var(--line);text-transform:none;width:100%;padding:2px 0';
+    nameIn.oninput = () => { L().name = nameIn.value || 'layer'; setDirty(true); clearTimeout(nameIn._t); nameIn._t = setTimeout(buildLayers, 300); };
+    const hs = section(host, 'LAYER ' + (sel + 1) + ' / ' + snd.layers.length); hs.appendChild(nameIn);
+    // wave picker
+    const ws = section(host, 'WAVE');
+    const wg = document.createElement('div'); wg.className = 'waves';
+    S.WAVES.forEach(w => {
+      const b = document.createElement('button'); if (w === l.wave) b.classList.add('on'); b.title = w;
+      b.innerHTML = `<canvas></canvas>${w}`; b.onclick = () => { L().wave = w; changed({ panel: true, layers: true }); };
+      wg.appendChild(b); requestAnimationFrame(() => glyphCanvas(b.querySelector('canvas'), w, w === l.wave ? GROUND : PALETTE[sel % PALETTE.length]));
+    });
+    ws.appendChild(wg);
+    // osc
+    const jt = document.createElement('button'); jt.textContent = l.jump ? 'PITCH JUMP ON' : 'PITCH JUMP'; if (l.jump) jt.classList.add('on');
+    jt.onclick = () => { L().jump = L().jump ? null : { at: 0.06, ratio: 1.5 }; changed({ panel: true }); };
+    const os = section(host, 'PITCH', jt);
+    OSC.forEach(sp => { if (!sp[6] || sp[6](l)) slider(os, L, sp, 'l-'); });
+    // hit
+    if (selHit >= 0 && l.hits[selHit]) {
+      const rm = document.createElement('button'); rm.textContent = 'REMOVE'; rm.onclick = () => { L().hits.splice(selHit, 1); selHit = -1; changed({ panel: true }); };
+      const hsx = section(host, 'HIT AT STEP ' + l.hits[selHit].t, rm);
+      HIT.forEach(sp => slider(hsx, () => L().hits[selHit], sp, 'h-', () => { changed(); }));
+    } else {
+      const hn = section(host, 'HITS'); const p = document.createElement('div'); p.className = 'note';
+      p.textContent = l.hits.length ? `${l.hits.length} hit${l.hits.length > 1 ? 's' : ''} on this layer. Click one in the score to edit its note, velocity and gate.` : 'No hits yet. Click a cell in this layer’s row to place one.';
+      hn.appendChild(p);
+    }
+    // groups
+    for (const [title, specs] of GROUPS) {
+      const extra = title === 'FILTER' ? chips([['none', 'OFF'], ['lp', 'LOW'], ['hp', 'HIGH'], ['bp', 'BAND']], l.filter.type, (v) => { L().filter.type = v; changed({ panel: true }); }) : null;
+      const s = section(host, title, extra);
+      specs.forEach(sp => { if (!sp[6] || sp[6](l)) slider(s, L, sp, 'l-'); });
+    }
+    // master
+    const ms = section(host, 'MASTER · WHOLE SOUND');
+    MASTER.forEach(sp => slider(ms, () => snd, sp, 'm-', (path) => changed(path === 'length' || path === 'steps' ? {} : null)));
+    host.scrollTop = keep;
+  }
+
+  // ---------- macros ----------
+  const MAC = [['pitch', 'PITCH', -12, 12, 0, 'st'], ['length', 'LENGTH', 0.5, 2, 1, 'x'], ['punch', 'PUNCH', 0, 1, 0, 'pct'], ['grit', 'GRIT', 0, 1, 0, 'pct'],
+    ['space', 'SPACE', 0, 1, 0, 'pct'], ['distance', 'DISTANCE', 0, 1, 0, 'pct'], ['retro', 'RETRO', 0, 1, 0, 'pct']];
+  function buildMacros() {
+    const host = $('macros');
+    for (const [name, label, mn, mx, neutral, unit] of MAC) {
+      const row = document.createElement('label'); row.className = 'macro'; row.title = S.MACROS[name].blurb;
+      const lg = name === 'length';
+      row.innerHTML = `<span>${label}</span><input type="range" id="mac-${name}" min="0" max="1000" step="1">`;
+      const inp = row.querySelector('input'); const neutralPos = lg ? toPos(neutral, mn, mx, 'log') : (neutral - mn) / (mx - mn);
+      inp.value = Math.round(neutralPos * 1000);
+      let base = null;
+      const begin = () => { if (!base) base = clone(snd); };
+      inp.addEventListener('pointerdown', begin); inp.addEventListener('keydown', begin);
+      inp.addEventListener('input', () => {
+        begin(); const p = inp.value / 1000; const v = lg ? fromPos(p, mn, mx, 'log') : mn + (mx - mn) * p;
+        snd = S.applyMacro(base, name, name === 'pitch' ? Math.round(v) : v);
+        status(label + ' ' + fmt[unit](name === 'pitch' ? Math.round(v) : v));
+        setDirty(true); clearTimeout(rTimer); rTimer = setTimeout(doRender, 30);
+      });
+      inp.addEventListener('change', () => { base = null; inp.value = Math.round(neutralPos * 1000); buildParams(); buildLayers(); if (!playing) play(); });
+      host.appendChild(row);
+    }
+  }
+
+  // ---------- library (db) ----------
+  function renderLib(state) {
+    const host = $('lib'); host.innerHTML = '';
+    $('libcount').textContent = db ? String(lib.length) : '';
+    if (!db) {
+      const p = document.createElement('p'); p.className = 'note';
+      p.textContent = state === 'loading' ? 'Connecting to the shared library…' : 'The shared library is unavailable in this view. Sounds still play, and JSON works for moving them to sfx-mcp.';
+      host.appendChild(p); return;
+    }
+    if (!lib.length) {
+      const p = document.createElement('p'); p.className = 'note';
+      p.textContent = 'No saved sounds yet. SAVE adds the one on screen. Your agent can also write sounds here, and they appear live.'; host.appendChild(p); return;
+    }
+    [...lib].sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''))).forEach(s => {
+      const row = document.createElement('div'); row.className = 'libitem' + (snd && s.id === snd.id ? ' cur' : ''); row.tabIndex = 0;
+      row.innerHTML = `<i>${kanjiOf(s)}</i><span>${escapeHtml(s.name || s.id)}</span><small>${s.by === 'claude' ? 'AGENT' : ''}</small>`;
+      const go = () => { if (dirty && snd.id !== s.id && !row.dataset.armed) { row.dataset.armed = '1'; row.querySelector('small').textContent = 'UNSAVED · TAP AGAIN'; setTimeout(() => { delete row.dataset.armed; renderLib(); }, 2500); return; } lastRev = s.rev; loadSound(s, { clean: true }); };
+      row.onclick = go; row.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+      host.appendChild(row);
+    });
+    if (snd && lib.some(s => s.id === snd.id)) {
+      const del = document.createElement('button'); del.textContent = 'DELETE “' + snd.name + '”'; del.style.marginTop = '8px'; del.style.whiteSpace = 'normal';
+      del.onclick = async () => {
+        if (!del.dataset.armed) { del.dataset.armed = '1'; del.textContent = 'CONFIRM DELETE'; del.classList.add('on'); return; }
+        try { await col.doc(snd.id).delete(); status('Deleted ' + snd.id + ' from the library.', 'good'); setDirty(true); } catch (e) { status('Delete failed: ' + (e.message || e.code), 'err'); }
+      };
+      host.appendChild(del);
+    }
+  }
+  async function saveToLib(asNew) {
+    if (!col) { status('The shared library is unavailable here. Use JSON or WAV instead.', 'err'); return; }
+    if (asNew) { let base = slug(snd.name), id = base, n = 2; while (lib.some(s => s.id === id)) id = base + '-' + n++; snd.id = id; $('idtag').textContent = id; }
+    const rev = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); myRev = rev; lastRev = rev;
+    const doc = Object.assign(clone(S.normalize(snd)), { rev, updatedAt: new Date().toISOString(), by: 'editor' });
+    try { await col.doc(snd.id).set(doc); setDirty(false); status('Saved ' + snd.id + '.', 'good'); }
+    catch (e) { status('Save failed: ' + (e.message || e.code) + (e.code === 'not_granted' ? ' — you can view but not edit this library.' : ''), 'err'); }
+  }
+  $('save').onclick = () => saveToLib(false);
+  $('saveas').onclick = () => saveToLib(true);
+  function showBanner(doc) {
+    const host = $('bannerHost'); host.innerHTML = '';
+    const b = document.createElement('div'); b.className = 'banner';
+    b.innerHTML = `<span>“${escapeHtml(doc.name || doc.id)}” was changed elsewhere${doc.by === 'claude' ? ' by your agent' : ''}. You have unsaved edits.</span>`;
+    const ld = document.createElement('button'); ld.textContent = 'LOAD THEIRS'; ld.onclick = () => { host.innerHTML = ''; lastRev = doc.rev; loadSound(doc, { clean: true }); play(); };
+    const k = document.createElement('button'); k.textContent = 'KEEP MINE'; k.onclick = () => { host.innerHTML = ''; };
+    b.append(ld, k); host.appendChild(b);
+  }
+  const use = (n) => (window.claude && window.claude.use ? window.claude.use(n) : Promise.resolve(null)).catch(() => null);
+  renderLib('loading');
+  use('db').then(d => {
+    if (!d) { renderLib(); return; }
+    db = d; col = d.collection('sounds');
+    col.onSnapshot(snap => {
+      lib = snap.docs.map(x => Object.assign({ id: x.id }, x.data()));
+      const cur = snd && lib.find(x => x.id === snd.id);
+      if (cur && cur.rev && cur.rev !== lastRev && cur.rev !== myRev) {
+        lastRev = cur.rev;
+        if (!dirty) { loadSound(cur, { clean: true }); status('Updated from the library' + (cur.by === 'claude' ? ' by your agent.' : '.'), 'good'); }
+        else showBanner(cur);
+      }
+      renderLib();
+    }, (e) => { status('Library error: ' + (e.message || e.code), 'err'); });
+  });
+
+  // ---------- downloads / JSON ----------
+  // Outside Claude (e.g. GitHub Pages) there is no downloads capability, so fall back to a normal browser download.
+  const inClaude = !!(window.claude && window.claude.use);
+  function saveFile(filename, data, type) {
+    if (dl) return dl.save({ filename, data });
+    if (inClaude) return Promise.reject({ code: 'unavailable', message: 'Downloads are unavailable in this view' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = filename;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    return Promise.resolve({ status: 'saved' });
+  }
+  use('downloads').then(d => { dl = d; if (!d && inClaude) { $('wav').title = 'Downloads are unavailable in this view'; } });
+  $('wav').onclick = async () => {
+    if (!res) return;
+    try { await saveFile(snd.id + '.wav', S.encodeWav(res), 'audio/wav'); status('Saved ' + snd.id + '.wav', 'good'); }
+    catch (e) { status(e.code === 'declined' ? 'Download cancelled.' : 'Download failed: ' + (e.message || e.code), e.code === 'declined' ? null : 'err'); }
+  };
+  $('json').onclick = () => {
+    const sh = document.createElement('div'); sh.className = 'sheet';
+    sh.innerHTML = `<div class="box" role="dialog" aria-label="Sound JSON"><div class="bar"><span>SFX-FORGE/1 JSON</span><span class="spacer"></span><button data-a="copy">COPY</button><button data-a="apply">APPLY</button>${dl || !inClaude ? '<button data-a="dl">SAVE .JSON</button>' : ''}<button data-a="close">CLOSE</button></div><textarea id="jsonText" spellcheck="false" aria-label="Sound JSON"></textarea><div class="note">Paste JSON from sfx-mcp’s get_sound and APPLY, or copy this into set_sound.</div><div class="status" id="jsonStatus"></div></div>`;
+    document.body.appendChild(sh);
+    const ta = sh.querySelector('textarea'), st = sh.querySelector('#jsonStatus'); ta.value = JSON.stringify(S.normalize(snd), null, 2);
+    sh.onclick = async (e) => {
+      const a = e.target.dataset && e.target.dataset.a; if (e.target === sh) { sh.remove(); return; }
+      if (a === 'close') sh.remove();
+      if (a === 'copy') { try { await navigator.clipboard.writeText(ta.value); st.textContent = 'Copied.'; } catch (err) { ta.select(); st.textContent = 'Selected. Press Ctrl/Cmd+C to copy.'; } }
+      if (a === 'apply') { try { const o = JSON.parse(ta.value); if (!o.id) o.id = slug(o.name || 'sound'); keepCurrent(); loadSound(o); remember(); sh.remove(); play(); } catch (err) { st.textContent = 'That is not valid JSON: ' + err.message; st.className = 'status err'; } }
+      if (a === 'dl') { try { await saveFile(snd.id + '.sfx.json', ta.value, 'application/json'); st.textContent = 'Saved.'; } catch (err) { st.textContent = err.code === 'declined' ? 'Cancelled.' : 'Failed: ' + (err.message || err.code); } }
+    };
+    sh.onkeydown = (e) => { if (e.key === 'Escape') sh.remove(); };
+    ta.focus();
+  };
+
+  // ---------- ask Claude ----------
+  use('sample').then(s => { sample = s; if (!s) $('askBox').hidden = true; });
+  const FORMAT_DOC = `Format "sfx-forge/1": {id, name, category, seed, length (seconds the step grid spans), steps (grid columns; step time = length/steps), master {gain 0.1-2, reverb 0-1, room 0-1, delay 0-1 echo mix, delayTime s, feedback 0-0.95, normalize true}, layers: [Layer] (1-8 layers usually)}.
+Layer: {name, wave: sine|square|saw|triangle|noise|pulse|fm|metal, duty 0-1 (pulse), freq Hz, freqEnd Hz, slide s (pitch sweep time; 0 = straight to freqEnd), curve (<1 fast start, >1 slow start), jump null|{at s, ratio} (coin-style pitch step), vib {rate Hz, depth semitones}, fm {ratio, index 0-12}, amp {a,h,d s, s 0-1 sustain level, r s}, filter {type none|lp|hp|bp, cutoff Hz, cutoffEnd Hz, q 0.1-20, time s optional}, crush {bits 1-16, rate 1-16 sample-hold}, drive 0-1, gain 0-1.5, pan -1..1, repeat {count 0-16, interval s, decay 0-1.2, pitch semitones per repeat}, hits [{t step index, note semitones, vel 0-2, len gate seconds}], mute false}.
+Noise uses freq as grain rate: low freq = crunchy, high = hiss. metal = inharmonic bell/cymbal. Impacts: a short noise layer through a falling lowpass plus a sine body sweeping ~200→50 Hz with drive. Keep total under 3 s.`;
+  $('askBtn').onclick = ask; $('askText').onkeydown = (e) => { if (e.key === 'Enter') ask(); };
+  let asking = null;
+  async function ask() {
+    const q = $('askText').value.trim(); if (!q || !sample) return;
+    if (asking) { asking.abort(); }
+    asking = new AbortController(); const me = asking;
+    $('askBtn').disabled = true; status('Claude is designing the sound…');
+    const cur = JSON.stringify(S.normalize(snd));
+    const prompt = `You design retro and modern video-game sound effects as JSON for a synth engine.\n${FORMAT_DOC}\n\nThe sound currently in the editor (use it as a starting point only if the request says to change or vary it):\n${cur}\n\nRequest: ${q}\n\nReply with ONLY the complete JSON object for the new sound, with a short lowercase name and a fitting category from: ${S.CATEGORIES.join(', ')}, custom.`;
+    try {
+      const out = await sample.json(prompt, { signal: me.signal, modelTier: 'default', onText: ({ text }) => { if (text && text.length > 20) status('Claude is writing the sound… ' + text.length + ' chars'); } });
+      if (me !== asking) return;
+      if (!out || !Array.isArray(out.layers)) throw { message: 'The reply had no layers.' };
+      out.id = slug(out.name || q.slice(0, 30)) + '-' + Date.now().toString(36).slice(-4);
+      out.seed = out.seed || ((Math.random() * 1e9) >>> 0);
+      keepCurrent(); loadSound(out); remember(); play(); status('Made “' + snd.name + '”. Tweak it, then SAVE.', 'good');
+    } catch (e) {
+      if (e && e.code === 'not_granted') { $('askBox').hidden = true; status('Asking Claude is turned off for this page.'); }
+      else if (e && e.code === 'aborted') {}
+      else status('Claude could not make that sound: ' + ((e && e.message) || 'unknown error') + '. Try rephrasing.', 'err');
+    } finally { if (me === asking) { asking = null; $('askBtn').disabled = false; } }
+  }
+
+  // ---------- misc controls ----------
+  $('play').onclick = () => playing ? stop() : play();
+  $('loop').onclick = () => { looping = !looping; $('loop').classList.toggle('on', looping); if (looping && !playing) play(); };
+  $('mutate').onclick = () => { keepCurrent(); snd = S.mutate(snd, +$('mutAmt').value, (Math.random() * 1e9) >>> 0); changed({ panel: true, layers: true }); clearTimeout(rTimer); doRender(); remember(snd.name + ' ~'); play(); };
+  $('reroll').onclick = () => snd.category === 'music' && S.MUSIC_STYLES[snd.style] ? compose(snd.style) : generate(S.CATEGORIES.includes(snd.category) ? snd.category : 'blip');
+  $('name').oninput = () => { snd.name = $('name').value || 'untitled'; setDirty(true); };
+  document.addEventListener('keydown', (e) => {
+    const t = e.target, tag = t && t.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && t.type !== 'range') || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('.sheet')) return;
+    if (e.code === 'Space') { e.preventDefault(); playing ? stop() : play(); }
+    else if (e.key === 'g' || e.key === 'G') $('reroll').click();
+    else if (e.key === 'm' || e.key === 'M') $('mutate').click();
+    else if (e.key === 'r' || e.key === 'R') $('rand').click();
+    else if (e.key === '[') goHist(histPos + 1);
+    else if (e.key === ']') goHist(histPos - 1);
+  });
+
+  // ---------- boot ----------
+  buildCats(); buildMacros();
+  const h = (location.hash || '').slice(1).toLowerCase(), m = h.match(/^([a-z]+)(?:-([0-9]+))?$/);
+  const cat = m && S.CATEGORIES.includes(m[1]) ? m[1] : 'punch';
+  const seed = m && m[2] ? +m[2] : 7;
+  loadSound(makeSound(cat, seed), { clean: true }); remember();
+  status('Press R for a random sound, pick a category or a music style, or click the score to place hits. Space plays.');
+})();
+</script>

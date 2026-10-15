@@ -1,0 +1,80 @@
+{
+  "format": "sfx-forge/1",
+  "id": "smash-character-select",
+  "name": "character select",
+  "category": "select",
+  "seed": 3,
+  "length": 0.25,
+  "steps": 16,
+  "master": {
+    "gain": 0.9,
+    "reverb": 0,
+    "room": 0.5,
+    "delay": 0,
+    "delayTime": 0.12,
+    "feedback": 0.3,
+    "normalize": true
+  },
+  "layers": [
+    {
+      "id": "L1",
+      "name": "blip",
+      "mute": false,
+      "wave": "square",
+      "duty": 0.3368576577864587,
+      "freq": 1320.2267837710679,
+      "freqEnd": 1320.2267837710679,
+      "slide": 0,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.001,
+        "h": 0.01224784028949216,
+        "d": 0.06815026949159801,
+        "s": 0,
+        "r": 0.02
+      },
+      "filter": {
+        "type": "none",
+        "cutoff": 8000,
+        "cutoffEnd": 8000,
+        "q": 0.7
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0,
+      "gain": 0.7,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 1,
+          "len": 0.05
+        },
+        {
+          "t": 2,
+          "note": 7,
+          "vel": 0.9,
+          "len": 0.06
+        }
+      ]
+    }
+  ]
+}

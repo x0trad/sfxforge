@@ -1,0 +1,164 @@
+{
+  "format": "sfx-forge/1",
+  "id": "smash-victory-jingle",
+  "name": "victory jingle",
+  "category": "victory",
+  "seed": 6,
+  "length": 1.4,
+  "steps": 24,
+  "master": {
+    "gain": 0.9,
+    "reverb": 0.2,
+    "room": 0.6,
+    "delay": 0,
+    "delayTime": 0.12,
+    "feedback": 0.3,
+    "normalize": true
+  },
+  "layers": [
+    {
+      "id": "L1",
+      "name": "lead",
+      "mute": false,
+      "wave": "square",
+      "duty": 0.33,
+      "freq": 268.3470594533719,
+      "freqEnd": 268.3470594533719,
+      "slide": 0,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 6,
+        "depth": 0.15
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.003,
+        "h": 0.02,
+        "d": 0.1,
+        "s": 0.5,
+        "r": 0.08
+      },
+      "filter": {
+        "type": "lp",
+        "cutoff": 4500,
+        "cutoffEnd": 4500,
+        "q": 0.7
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0,
+      "gain": 0.7,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 0.9,
+          "len": 0.13
+        },
+        {
+          "t": 3,
+          "note": 4,
+          "vel": 0.9,
+          "len": 0.13
+        },
+        {
+          "t": 6,
+          "note": 7,
+          "vel": 0.9,
+          "len": 0.13
+        },
+        {
+          "t": 9,
+          "note": 12,
+          "vel": 0.9,
+          "len": 0.13
+        },
+        {
+          "t": 12,
+          "note": 7,
+          "vel": 0.9,
+          "len": 0.13
+        },
+        {
+          "t": 15,
+          "note": 12,
+          "vel": 0.9,
+          "len": 0.5
+        }
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "bass",
+      "mute": false,
+      "wave": "triangle",
+      "duty": 0.5,
+      "freq": 134.17352972668596,
+      "freqEnd": 134.17352972668596,
+      "slide": 0,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.003,
+        "h": 0.02,
+        "d": 0.2,
+        "s": 0.4,
+        "r": 0.1
+      },
+      "filter": {
+        "type": "none",
+        "cutoff": 8000,
+        "cutoffEnd": 8000,
+        "q": 0.7
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0,
+      "gain": 0.6,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 1,
+          "len": 0.3
+        },
+        {
+          "t": 15,
+          "note": 0,
+          "vel": 1,
+          "len": 0.5
+        }
+      ]
+    }
+  ]
+}

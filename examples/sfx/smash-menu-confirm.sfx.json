@@ -1,0 +1,80 @@
+{
+  "format": "sfx-forge/1",
+  "id": "smash-menu-confirm",
+  "name": "menu confirm",
+  "category": "confirm",
+  "seed": 5,
+  "length": 0.3,
+  "steps": 16,
+  "master": {
+    "gain": 0.9,
+    "reverb": 0,
+    "room": 0.5,
+    "delay": 0,
+    "delayTime": 0.12,
+    "feedback": 0.3,
+    "normalize": true
+  },
+  "layers": [
+    {
+      "id": "L1",
+      "name": "ui",
+      "mute": false,
+      "wave": "sine",
+      "duty": 0.5,
+      "freq": 775.9099643677473,
+      "freqEnd": 775.9099643677473,
+      "slide": 0,
+      "curve": 1,
+      "jump": null,
+      "vib": {
+        "rate": 0,
+        "depth": 0
+      },
+      "fm": {
+        "ratio": 2,
+        "index": 2
+      },
+      "amp": {
+        "a": 0.002,
+        "h": 0.02,
+        "d": 0.08,
+        "s": 0.2,
+        "r": 0.04
+      },
+      "filter": {
+        "type": "none",
+        "cutoff": 8000,
+        "cutoffEnd": 8000,
+        "q": 0.7
+      },
+      "crush": {
+        "bits": 16,
+        "rate": 1
+      },
+      "drive": 0,
+      "gain": 0.7,
+      "pan": 0,
+      "repeat": {
+        "count": 0,
+        "interval": 0.06,
+        "decay": 0.6,
+        "pitch": 0
+      },
+      "hits": [
+        {
+          "t": 0,
+          "note": 0,
+          "vel": 0.9,
+          "len": 0.06
+        },
+        {
+          "t": 2,
+          "note": 7,
+          "vel": 1,
+          "len": 0.12
+        }
+      ]
+    }
+  ]
+}
