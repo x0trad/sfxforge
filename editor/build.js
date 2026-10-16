@@ -18,8 +18,18 @@ const otMeta = ot ? '<meta http-equiv="origin-trial" content="' + ot + '">' : ''
 const out = '<!doctype html><html lang="en"><head><meta charset="utf-8">' + otMeta
   + '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
   + '<style>[hidden]{display:none!important}body{margin:0}</style></head><body>\n' + body + '\n</body></html>\n';
-for (const name of ['index.html', 'sfx-forge.html']) fs.writeFileSync(path.join(root, 'dist', name), out);
+// Vercel Web Analytics: ship the @vercel/analytics browser module and call inject() on every page.
+// The package has no imports, so it runs as a plain ES module without a bundler.
+let analytics = '';
+try {
+  const mod = require.resolve('@vercel/analytics').replace(/index\.js$/, 'index.mjs');
+  fs.mkdirSync(path.join(root, 'dist', 'va'), { recursive: true });
+  fs.copyFileSync(mod, path.join(root, 'dist', 'va', 'analytics.mjs'));
+  analytics = '<script type="module">import { inject } from "/va/analytics.mjs"; inject();</script>';
+} catch (e) { console.warn('@vercel/analytics not installed: building without Web Analytics (run npm install)'); }
+const withAnalytics = (html) => analytics ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, analytics + '\n</body>') : html;
+for (const name of ['index.html', 'sfx-forge.html']) fs.writeFileSync(path.join(root, 'dist', name), withAnalytics(out));
 console.log('dist/index.html + dist/sfx-forge.html', (out.length / 1024).toFixed(0) + ' KB', ot ? '(WebMCP origin trial token included)' : '(no WebMCP origin trial token)');
 // Static pages that ship as-is.
-for (const page of ['connect.html']) fs.copyFileSync(path.join(__dirname, page), path.join(root, 'dist', page));
-console.log('dist/connect.html');
+for (const page of ['connect.html']) fs.writeFileSync(path.join(root, 'dist', page), withAnalytics(fs.readFileSync(path.join(__dirname, page), 'utf8')));
+console.log('dist/connect.html', analytics ? '(Web Analytics on)' : '(Web Analytics off)');

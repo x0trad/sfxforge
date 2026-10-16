@@ -29,5 +29,8 @@
     "chiptune",
     "synth",
     "sound-effects"
-  ]
+  ],
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
 }

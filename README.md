@@ -91,6 +91,10 @@ Example prompts:
 - "Make 3 random songs at wildness 0.7, keep the best one, then give it new drums until the groove is heavier."
 - "Roll 6 random sounds at wildness 0.3 and keep the two that sound most like a coin pickup."
 
+## Analytics
+
+The hosted site uses [Vercel Web Analytics](https://vercel.com/docs/analytics) through the `@vercel/analytics` package. `npm run build` copies the package's browser module to `dist/va/analytics.mjs` and calls `inject()` on every page. If the package isn't installed, the build skips it.
+
 ## WebMCP (agents in the browser)
 
 The editor page also registers its controls as [WebMCP](https://developer.chrome.com/docs/ai/webmcp) tools, so an AI agent running in the browser can drive it directly. When registration succeeds the top bar shows `WEBMCP · 12 TOOLS`.

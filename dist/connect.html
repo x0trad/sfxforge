@@ -313,5 +313,6 @@ document.querySelectorAll('.copy').forEach(function (btn) {
 });
 function select(el) { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
 </script>
+<script type="module">import { inject } from "/va/analytics.mjs"; inject();</script>
 </body>
 </html>
